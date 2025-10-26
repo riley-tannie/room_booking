@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/lecturer/home_admin.dart';
+import 'package:room_booking/lecturer/home_lecturer.dart';
 import './student/homepage.dart';
 import './staff/home_staff.dart';
 
@@ -270,7 +270,7 @@ class SignInScreen extends StatelessWidget {
     } else if (role == 'staff') {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeStaff()));
     } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeAdmin()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeLecturer()));
     }
   }
 }
