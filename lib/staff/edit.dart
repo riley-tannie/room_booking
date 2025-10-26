@@ -235,16 +235,19 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
           _buildCardContainer(
             title: 'Add your image of room',
             child: Container(
-              height: 130,
+              width: double.infinity,
+              height: MediaQuery.of(context).size.width * 0.55, // ✅ responsive
               decoration: BoxDecoration(
                 color: const Color(0xFFF7FBF7),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: const Icon(
-                Icons.add_photo_alternate,
-                size: 40,
-                color: Colors.grey,
+              child: const Center(
+                child: Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 70, // ✅ bigger icon for balance
+                  color: Colors.grey,
+                ),
               ),
             ),
           ),
