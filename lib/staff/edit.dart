@@ -14,6 +14,18 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
   int _selectedTab = 0;
   int _currentIndex = 1;
 
+  // Map room names to asset images
+  final Map<String, String> _roomImages = {
+    'Multimedia Room 5': 'assets/images/multimedia_3.jpg',
+    'Lecture Hall 2': 'assets/images/lecture_hall2.jpg',
+    'Lanchester Study Room': 'assets/images/study_room4.jpg',
+    'Lecture Hall 1': 'assets/images/lecture_hall2.jpg',
+    'Study Room 4': 'assets/images/study_room4.jpg',
+  };
+
+  // Default image if specific room image is not found
+  final String _defaultRoomImage = 'assets/images/study_room1.jpg';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,8 +106,8 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
 
       // ---------- Floating Bottom Navigation ----------
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-        height: 75,
+        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+        height: 50,
         decoration: BoxDecoration(
           color: const Color(0xFF2C5473),
           borderRadius: BorderRadius.circular(25),
@@ -107,59 +119,67 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
             ),
           ],
         ),
-        child: ClipRRect(
+        child: Row(
+          children: [
+            _buildNavItem(Icons.meeting_room, 'Rooms', 0),
+            _buildNavItem(Icons.admin_panel_settings, 'Admin', 1),
+            _buildNavItem(Icons.dashboard, 'Dashboard', 2),
+            _buildNavItem(Icons.history, 'History', 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    bool isActive = _currentIndex == index;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(25),
-          child: BottomNavigationBar(
-            backgroundColor: const Color(0xFF2C5473),
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _currentIndex,
-            elevation: 0,
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white70,
-            onTap: (index) {
-              switch (index) {
-                case 0:
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => HomeStaff()),
-                    (route) => false,
-                  );
-                  break;
-                case 1:
-                  // Already on admin page
-                  break;
-                case 2:
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => Dashboard()),
-                    (route) => false,
-                  );
-                  break;
-                case 3:
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => BookingHistoryPage()),
-                    (route) => false,
-                  );
-                  break;
-              }
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.meeting_room),
-                label: 'Rooms',
+          onTap: () {
+            setState(() => _currentIndex = index);
+            switch (index) {
+              case 0:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => HomeStaff()),
+                );
+                break;
+              case 1:
+                // Already on admin page
+                break;
+              case 2:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => Dashboard()),
+                );
+                break;
+              case 3:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => BookingHistoryPage()),
+                );
+                break;
+            }
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isActive ? Colors.white : Colors.white70,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.admin_panel_settings),
-                label: 'Admin',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard),
-                label: 'Dashboard',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history),
-                label: 'History',
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? Colors.white : Colors.white70,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ],
           ),
@@ -235,7 +255,8 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
           _buildCardContainer(
             title: 'Add your image of room',
             child: Container(
-              height: 130,
+              width: double.infinity,
+              height: MediaQuery.of(context).size.width * 0.55,
               decoration: BoxDecoration(
                 color: const Color(0xFFF7FBF7),
                 borderRadius: BorderRadius.circular(20),
@@ -388,6 +409,8 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     String location,
     bool editable,
   ) {
+    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -404,11 +427,23 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            'https://picsum.photos/80/80',
-            fit: BoxFit.cover,
+          child: Image.asset(
+            imagePath,
             width: 60,
             height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 60,
+                height: 60,
+                color: Colors.grey[200],
+                child: const Icon(
+                  Icons.photo,
+                  color: Colors.grey,
+                  size: 24,
+                ),
+              );
+            },
           ),
         ),
         title: Text(
