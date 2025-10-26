@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'editing_detail.dart';
 import 'home_staff.dart';
-import 'dashboard.dart';
 import '../staff/booking_history.dart';
+import 'dashboard.dart';
 import 'profile.dart';
 
 class EditRoomTypesPage extends StatefulWidget {
@@ -11,54 +11,172 @@ class EditRoomTypesPage extends StatefulWidget {
 }
 
 class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
-  int _selectedTab = 0; 
-  int _currentIndex = 1; 
+  int _selectedTab = 0;
+  int _currentIndex = 1;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Editing Room Types'),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => HomeStaff()),);
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ProfilePage()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
+      backgroundColor: const Color(0xFFF9FAFA),
+      body: Stack(
         children: [
-          _buildTabBar(),
-          Expanded(
-            child: _buildCurrentTab(),
+          // ---------- Header ----------
+          Container(
+            height: 150,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C5473),
+              borderRadius: BorderRadius.only(
+                bottomRight: Radius.circular(100),
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      'Editing Room Types',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 8,
+                    top: 4,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => HomeStaff()),
+                        );
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 4,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => ProfilePage()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ---------- Body ----------
+          Padding(
+            padding: const EdgeInsets.only(top: 160),
+            child: Column(
+              children: [
+                _buildTabBar(),
+                Expanded(child: _buildCurrentTab()),
+              ],
+            ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+
+      // ---------- Floating Bottom Navigation ----------
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+        height: 75,
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C5473),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BottomNavigationBar(
+            backgroundColor: const Color(0xFF2C5473),
+            type: BottomNavigationBarType.fixed,
+            currentIndex: _currentIndex,
+            elevation: 0,
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white70,
+            onTap: (index) {
+              switch (index) {
+                case 0:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => HomeStaff()),
+                    (route) => false,
+                  );
+                  break;
+                case 1:
+                  // Already on admin page
+                  break;
+                case 2:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => Dashboard()),
+                    (route) => false,
+                  );
+                  break;
+                case 3:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => BookingHistoryPage()),
+                    (route) => false,
+                  );
+                  break;
+              }
+            },
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.meeting_room),
+                label: 'Rooms',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.admin_panel_settings),
+                label: 'Admin',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard),
+                label: 'Dashboard',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.history),
+                label: 'History',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
+  // ---------- Tabs ----------
   Widget _buildTabBar() {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFE8EDF1),
+        borderRadius: BorderRadius.circular(25),
       ),
-      margin: EdgeInsets.all(16),
       child: Row(
         children: [
           _buildTab('Add', 0),
@@ -70,25 +188,23 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
   }
 
   Widget _buildTab(String title, int index) {
+    final bool isActive = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-          });
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: 12),
+        onTap: () => setState(() => _selectedTab = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 40,
           decoration: BoxDecoration(
-            color: _selectedTab == index ? Colors.blue[700] : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            color: isActive ? const Color(0xFF2C5473) : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
           ),
+          alignment: Alignment.center,
           child: Text(
             title,
-            textAlign: TextAlign.center,
             style: TextStyle(
-              color: _selectedTab == index ? Colors.white : Colors.black,
-              fontWeight: FontWeight.w500,
+              color: isActive ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -96,6 +212,7 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     );
   }
 
+  // ---------- Tabs Content ----------
   Widget _buildCurrentTab() {
     switch (_selectedTab) {
       case 0:
@@ -109,63 +226,61 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     }
   }
 
+  // ---------- Add Tab ----------
   Widget _buildAddTab() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text(
-                    'Add your image of room',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Container(
-                    height: 120,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
-                  ),
-                ],
+          _buildCardContainer(
+            title: 'Add your image of room',
+            child: Container(
+              height: 130,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF7FBF7),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Icon(
+                Icons.add_photo_alternate,
+                size: 40,
+                color: Colors.grey,
               ),
             ),
           ),
-          SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Adding detail',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+          const SizedBox(height: 20),
+          _buildCardContainer(
+            title: 'Adding detail',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTextField('Room Name', 'Type your room name'),
+                _buildTextField('Booking status', 'Type your status'),
+                _buildTextField('Location', 'Type your location'),
+                const SizedBox(height: 16),
+                Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2C5473),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 40,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () {},
+                    child: const Text(
+                      'Add',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  _buildFormField('Room Name', 'Type your room name'),
-                  _buildFormField('Booking status', 'Type your status'),
-                  _buildFormField('Location', 'Type your location'),
-                  SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      child: Text('Add'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -173,9 +288,10 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     );
   }
 
+  // ---------- Edit / Disable ----------
   Widget _buildEditTab() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           _buildEditableRoomCard('Multimedia Room 5', 'Available', 'Library'),
@@ -188,7 +304,7 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
 
   Widget _buildDisableTab() {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           _buildDisableRoomCard('Multimedia Room 5', 'Available', 'Library'),
@@ -199,128 +315,150 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     );
   }
 
-  Widget _buildFormField(String label, String hint) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
+  // ---------- Components ----------
+  Widget _buildTextField(String label, String hint) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          filled: true,
+          fillColor: const Color(0xFFF7FBF7),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
-        ),
-        SizedBox(height: 4),
-        TextField(
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(),
-          ),
-        ),
-        SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildEditableRoomCard(String roomName, String status, String location) {
-    Color statusColor = _getStatusColor(status);
-    
-    return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    roomName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    status,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (location.isNotEmpty) ...[
-                    SizedBox(height: 4),
-                    Text(
-                      location,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => EditingDetailPage()),
-                );
-              },
-              child: Text('Edit details'),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildDisableRoomCard(String roomName, String status, String location) {
-    return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
+  Widget _buildCardContainer({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableRoomCard(
+    String roomName,
+    String status,
+    String location,
+  ) {
+    return _buildRoomCard(roomName, status, location, true);
+  }
+
+  Widget _buildDisableRoomCard(
+    String roomName,
+    String status,
+    String location,
+  ) {
+    return _buildRoomCard(roomName, status, location, false);
+  }
+
+  Widget _buildRoomCard(
+    String roomName,
+    String status,
+    String location,
+    bool editable,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            'https://picsum.photos/80/80',
+            fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+          ),
+        ),
+        title: Text(
+          roomName,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    roomName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    status,
-                    style: TextStyle(
-                      color: _getStatusColor(status),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    location,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+            Text(
+              status,
+              style: TextStyle(
+                color: _getStatusColor(status),
+                fontWeight: FontWeight.w600,
               ),
             ),
-            ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: Text('Disable'),
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 16, color: Colors.black54),
+                Text(location, style: const TextStyle(color: Colors.black54)),
+              ],
             ),
           ],
         ),
+        trailing: editable
+            ? TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => EditingDetailPage()),
+                  );
+                },
+                child: const Text(
+                  'Edit details',
+                  style: TextStyle(
+                    color: Color(0xFF2C5473),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF6666),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Disable'),
+              ),
       ),
     );
   }
@@ -336,59 +474,5 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
       default:
         return Colors.black;
     }
-  }
-
-  BottomNavigationBar _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) {
-        // Use push instead of pushReplacement to maintain navigation stack
-        switch (index) {
-          case 0:
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => HomeStaff()),
-              (route) => false,
-            );
-            break;
-          case 1:
-            // Already on admin page
-            break;
-          case 2:
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => Dashboard()),
-              (route) => false,
-            );
-            break;
-          case 3:
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => BookingHistoryPage()),
-              (route) => false,
-            );
-            break;
-        }
-      },
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.meeting_room),
-          label: 'Rooms',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.admin_panel_settings),
-          label: 'Admin',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: 'History',
-        ),
-      ],
-    );
   }
 }
