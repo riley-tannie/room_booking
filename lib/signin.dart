@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:room_booking/lecturer/home_admin.dart';
 import './student/homepage.dart';
 import './staff/home_staff.dart';
-import 'app_theme.dart'; 
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({Key? key}) : super(key: key);
@@ -15,12 +14,12 @@ class SignInScreen extends StatelessWidget {
         children: [
           // ---------- Header ----------
           Container(
-            width: 1000,
             height: 200,
+            width: 1000,
             decoration: const BoxDecoration(
               color: Color(0xFF2C5473),
               borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(50),
+                bottomRight: Radius.circular(100),
               ),
             ),
             child: SafeArea(
