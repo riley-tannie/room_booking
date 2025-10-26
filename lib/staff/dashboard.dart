@@ -20,7 +20,7 @@ class _DashboardState extends State<Dashboard> {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- ส่วนหัว ----------
+          // ---------- Header ----------
           Container(
             height: 110,
             decoration: const BoxDecoration(
@@ -31,7 +31,7 @@ class _DashboardState extends State<Dashboard> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // 🔹 ข้อความตรงกลาง
+                  // Center text
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
@@ -45,7 +45,7 @@ class _DashboardState extends State<Dashboard> {
                     ),
                   ),
 
-                  // 🔹 ไอคอนโปรไฟล์อยู่ขนานกันด้านขวา
+                  // Profile icon on the right
                   Positioned(
                     right: 18,
                     top: 15,
@@ -68,7 +68,7 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
 
-          // ---------- เนื้อหา ----------
+          // ---------- Content ----------
           Padding(
             padding: const EdgeInsets.only(top: 130),
             child: Column(
@@ -131,10 +131,10 @@ class _DashboardState extends State<Dashboard> {
         ],
       ),
 
-      // ---------- แถบ Navigation ด้านล่าง ----------
+      // ---------- Floating Bottom Navigation ----------
       bottomNavigationBar: Container(
-        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-        height: 75,
+        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+        height: 50,
         decoration: BoxDecoration(
           color: const Color(0xFF2C5473),
           borderRadius: BorderRadius.circular(25),
@@ -146,61 +146,67 @@ class _DashboardState extends State<Dashboard> {
             ),
           ],
         ),
-        child: ClipRRect(
+        child: Row(
+          children: [
+            _buildNavItem(Icons.meeting_room, 'Rooms', 0),
+            _buildNavItem(Icons.admin_panel_settings, 'Admin', 1),
+            _buildNavItem(Icons.dashboard, 'Dashboard', 2),
+            _buildNavItem(Icons.history, 'History', 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    bool isActive = _currentIndex == index;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(25),
-          child: BottomNavigationBar(
-            backgroundColor: const Color(0xFF2C5473),
-            type: BottomNavigationBarType.fixed,
-            currentIndex: _currentIndex,
-            elevation: 0,
-            selectedItemColor: Colors.white,
-            unselectedItemColor: Colors.white70,
-            showSelectedLabels: true,
-            showUnselectedLabels: true,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            onTap: (index) {
-              setState(() => _currentIndex = index);
-              switch (index) {
-                case 0:
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => HomeStaff()),
-                  );
-                  break;
-                case 1:
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
-                  );
-                  break;
-                case 2:
-                  // Current page
-                  break;
-                case 3:
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => BookingHistoryPage()),
-                  );
-                  break;
-              }
-            },
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.meeting_room),
-                label: 'Rooms',
+          onTap: () {
+            setState(() => _currentIndex = index);
+            switch (index) {
+              case 0:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => HomeStaff()),
+                );
+                break;
+              case 1:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
+                );
+                break;
+              case 2:
+                // Current page
+                break;
+              case 3:
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => BookingHistoryPage()),
+                );
+                break;
+            }
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isActive ? Colors.white : Colors.white70,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.admin_panel_settings),
-                label: 'Admin',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.dashboard),
-                label: 'Dashboard',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.history),
-                label: 'History',
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? Colors.white : Colors.white70,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
               ),
             ],
           ),
@@ -209,7 +215,7 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  // ---------- การ์ดสถานะ ----------
+  // ---------- Status Cards ----------
   Widget _buildStatusCard(
     IconData icon,
     String title,
