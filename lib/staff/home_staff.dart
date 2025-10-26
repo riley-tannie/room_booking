@@ -48,8 +48,8 @@ class _HomeStaffState extends State<HomeStaff> {
             _buildRoomSection(
               'Multimedia Room',
               [
-                _RoomItem('Study Room 2', 'Study Room', 'Free'),
-                _RoomItem('Multimedia Room 1', 'Multiweek', 'Book Now'),
+                _RoomItem('Study Room 2', 'Study Room', 'See details'),
+                _RoomItem('Multimedia Room 1', 'Multiweek', 'See details'),
                 _RoomItem('Study Room', 'Multimedia Room 1', 'See details'),
               ],
             ),
