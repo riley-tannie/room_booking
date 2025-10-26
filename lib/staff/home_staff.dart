@@ -13,6 +13,19 @@ class HomeStaff extends StatefulWidget {
 class _HomeStaffState extends State<HomeStaff> {
   int _currentIndex = 0; // Room List is first
 
+  // Map room names to asset images
+  final Map<String, String> _roomImages = {
+    'Study Room 2': 'assets/images/study_room2.jpg',
+    'Multimedia Room 1': 'assets/images/multimedia_1.jpg',
+    'Study Room': 'assets/images/study_room3.jpg',
+    'Lanchester Study Room': 'assets/images/study_room1.jpg',
+    'Lecture Hall 1': 'assets/images/lecture_hall1.jpg',
+    'Lecture Hall 2': 'assets/images/lecture_hall2.jpg',
+  };
+
+  // Default image if specific room image is not found
+  final String _defaultRoomImage = 'assets/images/study_room1.jpg';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,6 +233,8 @@ class _HomeStaffState extends State<HomeStaff> {
   }
 
   Widget _buildRoomCard(_RoomItem room) {
+    String imagePath = _roomImages[room.name] ?? _defaultRoomImage;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -237,6 +252,29 @@ class _HomeStaffState extends State<HomeStaff> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
+            // Room Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imagePath,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[200],
+                    child: const Icon(
+                      Icons.photo,
+                      color: Colors.grey,
+                      size: 30,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,6 +323,8 @@ class _HomeStaffState extends State<HomeStaff> {
   }
 
   Widget _buildReservedRoomCard(String roomName, String location) {
+    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -302,6 +342,29 @@ class _HomeStaffState extends State<HomeStaff> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
+            // Room Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imagePath,
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.grey[200],
+                    child: const Icon(
+                      Icons.photo,
+                      color: Colors.grey,
+                      size: 30,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

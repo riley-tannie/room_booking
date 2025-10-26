@@ -14,6 +14,18 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
   int _selectedTab = 0;
   int _currentIndex = 1;
 
+  // Map room names to asset images
+  final Map<String, String> _roomImages = {
+    'Multimedia Room 5': 'assets/images/multimedia_3.jpg',
+    'Lecture Hall 2': 'assets/images/lecture_hall2.jpg',
+    'Lanchester Study Room': 'assets/images/study_room4.jpg',
+    'Lecture Hall 1': 'assets/images/lecture_hall2.jpg',
+    'Study Room 4': 'assets/images/study_room4.jpg',
+  };
+
+  // Default image if specific room image is not found
+  final String _defaultRoomImage = 'assets/images/study_room1.jpg';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -244,7 +256,7 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
             title: 'Add your image of room',
             child: Container(
               width: double.infinity,
-              height: MediaQuery.of(context).size.width * 0.55, // ✅ responsive
+              height: MediaQuery.of(context).size.width * 0.55,
               decoration: BoxDecoration(
                 color: const Color(0xFFF7FBF7),
                 borderRadius: BorderRadius.circular(20),
@@ -397,6 +409,8 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     String location,
     bool editable,
   ) {
+    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -413,11 +427,23 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            'https://picsum.photos/80/80',
-            fit: BoxFit.cover,
+          child: Image.asset(
+            imagePath,
             width: 60,
             height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 60,
+                height: 60,
+                color: Colors.grey[200],
+                child: const Icon(
+                  Icons.photo,
+                  color: Colors.grey,
+                  size: 24,
+                ),
+              );
+            },
           ),
         ),
         title: Text(

@@ -61,7 +61,6 @@ class _HomeAdminState extends State<HomeAdmin> {
   }
 }
 
-// Empty page widget
 class EmptyPage extends StatelessWidget {
   final String title;
 

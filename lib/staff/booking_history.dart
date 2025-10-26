@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:room_booking/staff/edit.dart';
 import 'home_staff.dart';
 import 'dashboard.dart';
-import 'profile.dart';
 import 'room_detail.dart';
 
 class BookingHistoryPage extends StatefulWidget {
@@ -15,11 +14,22 @@ class BookingHistoryPage extends StatefulWidget {
 class _BookingHistoryPageState extends State<BookingHistoryPage> {
   int _currentIndex = 3; // History active
 
-  final List<Map<String, String>> _rooms = [
-    {'name': 'Multimedia Room 1', 'image': 'https://picsum.photos/200/150?1'},
-    {'name': 'Lecture Hall 3', 'image': 'https://picsum.photos/200/150?2'},
-    {'name': 'Study Room 4', 'image': 'https://picsum.photos/200/150?3'},
-    {'name': 'Lecture Hall 7', 'image': 'https://picsum.photos/200/150?4'},
+  // Map room names to asset images
+  final Map<String, String> _roomImages = {
+    'Multimedia Room 1': 'assets/images/multimedia_1.jpg',
+    'Lecture Hall 3': 'assets/images/lecture_hall3.jpg',
+    'Study Room 4': 'assets/images/study_room4.jpg',
+    'Lecture Hall 7': 'assets/images/lecture_hall1.jpg',
+  };
+
+  // Default image if specific room image is not found
+  final String _defaultRoomImage = 'assets/images/study_room2.jpg';
+
+  final List<String> _roomNames = [
+    'Multimedia Room 1',
+    'Lecture Hall 3',
+    'Study Room 4',
+    'Lecture Hall 7',
   ];
 
   @override
@@ -58,10 +68,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
             padding: const EdgeInsets.only(top: 130, left: 20, right: 20),
             child: SingleChildScrollView(
               child: Column(
-                children: _rooms
+                children: _roomNames
                     .map(
-                      (room) =>
-                          _buildHistoryItem(room['name']!, room['image']!),
+                      (roomName) => _buildHistoryItem(roomName),
                     )
                     .toList(),
               ),
@@ -155,7 +164,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
   }
 
   // ---------- card show room ----------
-  Widget _buildHistoryItem(String name, String imageUrl) {
+  Widget _buildHistoryItem(String roomName) {
+    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
@@ -175,17 +186,29 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
+              child: Image.asset(
+                imagePath,
                 width: 65,
                 height: 65,
                 fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 65,
+                    height: 65,
+                    color: Colors.grey[200],
+                    child: const Icon(
+                      Icons.photo,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                name,
+                roomName,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,

@@ -10,175 +10,256 @@ class SignInScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Sign In'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Header
-            Text(
-              'ROOM RESERVATION',
-              style: TextStyle(
-                fontSize: 28, 
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Welcome to Room Reservation',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 40),
-            
-            // ID Field
-            Text('ID Number', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Enter your ID number',
-                border: OutlineInputBorder(),
+      backgroundColor: const Color(0xFFF9FAFA),
+      body: Stack(
+        children: [
+          // ---------- Header ----------
+          Container(
+            width: 1000,
+            height: 200,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C5473),
+              borderRadius: BorderRadius.only(
+                bottomRight: Radius.circular(50),
               ),
             ),
-            SizedBox(height: 20),
-
-            // Name Field
-            Text('Full Name', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Enter your full name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 20),
-            
-            // Username Field
-            Text('Username', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Enter your username',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 20),
-            
-            // Password Field
-            Text('Password', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: '*********',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            SizedBox(height: 20),
-            
-            // Role Selection
-            Text('Select Role', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _goToHome(context, 'student'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
-                    child: Text('Student', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _goToHome(context, 'staff'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
-                    child: Text('Staff', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => _goToHome(context, 'admin'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
-                    child: Text('Admin', style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 30),
-            
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _goToHome(context, 'student'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(
-                  'Sign In',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Don't have an account? "),
-                GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Sign up feature coming soon!'),
-                        backgroundColor: AppTheme.primaryColor,
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'Sign Up Here',
+            child: SafeArea(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'ROOM RESERVATION',
                     style: TextStyle(
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Welcome to Room Reservation',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ---------- Body ----------
+          Padding(
+            padding: const EdgeInsets.only(top: 220),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // ID Field
+                  _buildTextField('ID Number', 'Enter your ID number'),
+                  const SizedBox(height: 16),
+                  
+                  // Name Field
+                  _buildTextField('Full Name', 'Enter your full name'),
+                  const SizedBox(height: 16),
+                  
+                  // Username Field
+                  _buildTextField('Username', 'Enter your username'),
+                  const SizedBox(height: 16),
+                  
+                  // Password Field
+                  _buildPasswordField('Password', '*********'),
+                  const SizedBox(height: 20),
+                  
+                  // Role Selection
+                  const Text(
+                    'Select Role',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E2A3A),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  _buildRoleButtons(context),
+                  const SizedBox(height: 30),
+                  
+                  // Sign In Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _goToHome(context, 'student'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2C5473),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Sign Up Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Sign up feature coming soon!'),
+                              backgroundColor: const Color(0xFF2C5473),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Sign Up Here',
+                          style: TextStyle(
+                            color: Color(0xFF2C5473),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
-            SizedBox(height: 20),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E2A3A),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordField(String label, String hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E2A3A),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          obscureText: true,
+          decoration: InputDecoration(
+            hintText: hint,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleButtons(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8EDF1),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Row(
+        children: [
+          _buildRoleButton('Student', 0, context),
+          _buildRoleButton('Staff', 1, context),
+          _buildRoleButton('Admin', 2, context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleButton(String role, int index, BuildContext context) {
+    // For demo purposes, we'll use a fixed selection. In real app, you'd manage state.
+    bool isSelected = index == 0; // Default to Student selected
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _goToHome(context, role.toLowerCase()),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 40,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF2C5473) : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            role,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
         ),
       ),
     );
@@ -189,9 +270,8 @@ class SignInScreen extends StatelessWidget {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
     } else if (role == 'staff') {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeStaff()));
-    } else{
+    } else {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeAdmin()));
     }
-    
   }
 }
