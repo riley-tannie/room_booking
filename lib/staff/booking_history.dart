@@ -27,22 +27,23 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Head ----------
+          // ---------- The Head part  ----------
           Container(
-            height: 150,
+            height: 110, // 🔹 เท่ากับ Dashboard
             decoration: const BoxDecoration(
-              color: Color(0xFF2C5473),
-              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(100)),
+              color: Color(0xFF2C5473), // 🔹 สีเดียวกัน
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(70), // 🔹 มุมโค้งเท่ากัน
+              ),
             ),
-            alignment: Alignment.center,
             child: const SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(top: 8),
+              child: Align(
+                alignment: Alignment.center,
                 child: Text(
                   'Your Booking History',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 20, // 🔹 ขนาดตัวอักษรเท่ากัน
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
                   ),
@@ -51,9 +52,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
             ),
           ),
 
-          // ---------- main ----------
+          // ---------- Content ----------
           Padding(
-            padding: const EdgeInsets.only(top: 160, left: 20, right: 20),
+            padding: const EdgeInsets.only(top: 130, left: 20, right: 20),
             child: SingleChildScrollView(
               child: Column(
                 children: _rooms
@@ -68,7 +69,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         ],
       ),
 
-      // ----------  Navigation  ----------
+      // ---------- Navigation Bar ----------
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
         height: 75,
@@ -146,7 +147,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     );
   }
 
-  // ---------- card room ----------
+  // ---------- card show room ----------
   Widget _buildHistoryItem(String name, String imageUrl) {
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
