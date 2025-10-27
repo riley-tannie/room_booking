@@ -1,167 +1,178 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/lecturer/home_admin.dart';
+import 'package:room_booking/lecturer/home_lecturer.dart';
 import './student/homepage.dart';
 import './staff/home_staff.dart';
-import 'app_theme.dart'; 
+import 'app_theme.dart';
 
 class SignInScreen extends StatelessWidget {
   const SignInScreen({Key? key}) : super(key: key);
 
+  void _goToHome(BuildContext context, String role) {
+    if (role == 'student') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen()),
+      );
+    } else if (role == 'staff') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeStaff()),
+      );
+    } else if (role == 'lecturer') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeLecturer()),
+      );
+    } else {
+      // Default fallback
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Access the global theme's text styles
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
+      // AppBar theme is inherited globally from AppTheme
       appBar: AppBar(
-        title: Text('Sign In'),
-        backgroundColor: AppTheme.primaryColor,
-        foregroundColor: Colors.white,
+        title: const Text('Sign In'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24), // Consistent, spacious padding
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header
             Text(
               'ROOM RESERVATION',
-              style: TextStyle(
-                fontSize: 28, 
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryColor,
-              ),
+              style: textTheme.displaySmall?.copyWith(color: AppTheme.primaryColor),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               'Welcome to Room Reservation',
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.textSecondary,
-              ),
+              style: textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 40),
-            
+            const SizedBox(height: 40),
+
             // ID Field
-            Text('ID Number', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
+            Text('ID Number', style: textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const TextField(
               decoration: InputDecoration(
                 hintText: 'Enter your ID number',
-                border: OutlineInputBorder(),
+                // Uses border/fill theme from AppTheme.inputDecorationTheme
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Name Field
-            Text('Full Name', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
+            Text('Full Name', style: textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const TextField(
               decoration: InputDecoration(
                 hintText: 'Enter your full name',
-                border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
-            
+            const SizedBox(height: 20),
+
             // Username Field
-            Text('Username', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
+            Text('Username', style: textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const TextField(
               decoration: InputDecoration(
                 hintText: 'Enter your username',
-                border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
-            
+            const SizedBox(height: 20),
+
             // Password Field
-            Text('Password', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
-            TextField(
+            Text('Password', style: textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const TextField(
               obscureText: true,
               decoration: InputDecoration(
                 hintText: '*********',
-                border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 20),
-            
-            // Role Selection
-            Text('Select Role', style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            )),
-            SizedBox(height: 8),
+            const SizedBox(height: 20),
+
+            // Role Selection (Small, Balanced Buttons)
+            Text('Select Role', style: textTheme.titleLarge),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => _goToHome(context, 'student'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      // Reduced vertical padding for smaller button size
+                      padding: const EdgeInsets.symmetric(vertical: 12), 
+                      // Use a slightly smaller/lighter font style
+                      textStyle: textTheme.bodyLarge, 
                     ),
-                    child: Text('Student', style: TextStyle(color: Colors.white)),
+                    child: const Text('Student'),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => _goToHome(context, 'staff'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      textStyle: textTheme.bodyLarge,
                     ),
-                    child: Text('Staff', style: TextStyle(color: Colors.white)),
+                    child: const Text('Staff'),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _goToHome(context, 'admin'),
+                    onPressed: () => _goToHome(context, 'lecturer'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      textStyle: textTheme.bodyLarge,
                     ),
-                    child: Text('Admin', style: TextStyle(color: Colors.white)),
+                    child: const Text('Lecturer'),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 30),
-            
+            const SizedBox(height: 30),
+
+            // Main Sign In Button (Full Width)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => _goToHome(context, 'student'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  // Override padding to be tall for the main action button
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: Text(
                   'Sign In',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  // Ensure text is white against the primary background
+                  style: textTheme.titleLarge?.copyWith(color: Colors.white), 
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
+            // Sign Up Link
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Don't have an account? "),
+                Text("Don't have an account? ", style: textTheme.bodyMedium),
                 GestureDetector(
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Sign up feature coming soon!'),
                         backgroundColor: AppTheme.primaryColor,
                       ),
@@ -169,29 +180,16 @@ class SignInScreen extends StatelessWidget {
                   },
                   child: Text(
                     'Sign Up Here',
-                    style: TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    // Use primary color to make the link stand out
+                    style: textTheme.titleLarge?.copyWith(color: AppTheme.primaryColor),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
-  }
-
-  void _goToHome(BuildContext context, String role) {
-    if (role == 'student') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
-    } else if (role == 'staff') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeStaff()));
-    } else{
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeAdmin()));
-    }
-    
   }
 }
