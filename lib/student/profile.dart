@@ -8,8 +8,8 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
-        backgroundColor: Colors.blue[700],
+        title: const Text('My Profile'),
+        backgroundColor: const Color(0xFF2C5473),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -22,7 +22,7 @@ class Profile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildProfileHeader(),
+            _buildProfileHeader(context),
             const SizedBox(height: 20),
             _buildMenuItems(context),
           ],
@@ -31,37 +31,57 @@ class Profile extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(BuildContext context) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 6,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             CircleAvatar(
               radius: 45,
-              backgroundColor: Colors.blue[100],
-              child: Icon(
-                Icons.person,
+              backgroundColor: const Color(0xFF2C5473).withOpacity(0.1),
+              child: const Icon(
+                Icons.person_pin,
                 size: 50,
-                color: Colors.blue[700],
+                color: Color(0xFF2C5473),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const Text(
-              'Riley',
+              'Riley Tan',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF1E2A3A),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Student | Faculty of Engineering',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '320 points',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF26A65B).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '320 points',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF26A65B),
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
@@ -72,38 +92,64 @@ class Profile extends StatelessWidget {
 
   Widget _buildMenuItems(BuildContext context) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
-          _buildMenuItem('Personal Info', Icons.person_outline),
-          _buildMenuItem('Setting', Icons.settings), 
-          _buildMenuItem('Support', Icons.help_outline),
-          _buildMenuItem('Privacy & Policy', Icons.privacy_tip_outlined),
-          _buildMenuItem('Sign out', Icons.logout,
-              isSignOut: true, context: context),
+          _buildMenuItem(context, 'Personal Info', Icons.person_outline),
+          _buildMenuItem(context, 'Security & Settings', Icons.settings),
+          _buildMenuItem(context, 'Booking Support', Icons.support_agent),
+          _buildMenuItem(context, 'Privacy & Policy', Icons.privacy_tip_outlined),
+          
+          _buildMenuItem(context, 'Sign out', Icons.logout, isSignOut: true),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItem(String title, IconData icon,
-      {bool isSignOut = false, BuildContext? context}) {
-    return ListTile(
-      leading: Icon(icon, color: isSignOut ? Colors.red : Colors.blueGrey),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSignOut ? Colors.red : Colors.black87,
-          fontWeight: FontWeight.w500,
+  Widget _buildMenuItem(BuildContext context, String title, IconData icon, {bool isSignOut = false}) {
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          leading: Icon(
+            icon,
+            color: isSignOut ? const Color(0xFFD64541) : const Color(0xFF2C5473),
+          ),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: isSignOut ? const Color(0xFFD64541) : const Color(0xFF1E2A3A),
+              fontWeight: isSignOut ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+          trailing: isSignOut
+              ? null
+              : const Icon(Icons.chevron_right, size: 20, color: Color(0xFF2C5473)),
+          onTap: () {
+            if (isSignOut) {
+              _handleSignOut(context);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Navigating to $title...'),
+                  backgroundColor: const Color(0xFF2C5473),
+                ),
+              );
+            }
+          },
         ),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {
-        if (isSignOut && context != null) {
-          _handleSignOut(context);
-        }
-      },
+        if (!isSignOut && title != 'Privacy & Policy')
+          const Divider(
+            height: 1,
+            indent: 20,
+            endIndent: 20,
+            color: Color(0xFFE8EDF1),
+          ),
+      ],
     );
   }
 
@@ -112,25 +158,33 @@ class Profile extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
+          title: const Text(
+            'Confirm Sign Out',
+            style: TextStyle(
+              color: Color(0xFF1E2A3A),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text('You will be logged out and returned to the sign-in screen.'),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Color(0xFF2C5473)),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => SignInScreen()),
+                  MaterialPageRoute(builder: (_) => const SignInScreen()),
                   (route) => false,
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFFD64541),
+                foregroundColor: Colors.white,
               ),
               child: const Text('Sign Out'),
             ),

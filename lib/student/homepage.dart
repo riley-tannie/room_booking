@@ -14,63 +14,144 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    RoomList(),
+    RoomList(), // This should NOT have its own header
     Booking(), 
     RequestStatus(),
     BookingHistory(),
   ];
 
+  String _getAppBarTitle(int index) {
+    switch (index) {
+      case 0:
+        return 'Available Rooms';
+      case 1:
+        return 'Booking';
+      case 2:
+        return 'Request Status';
+      case 3:
+        return 'Booking History';
+      default:
+        return 'Room Reservation';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Room Reservation'),
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => Profile()),
-              );
-            },
+      backgroundColor: const Color(0xFFF9FAFA),
+      body: Stack(
+        children: [
+          // ---------- Header ----------
+          Container(
+            height: 150,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C5473),
+              borderRadius: BorderRadius.only(
+                bottomRight: Radius.circular(100),
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      _getAppBarTitle(_currentIndex),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 4,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => Profile()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ---------- Body ----------
+          Padding(
+            padding: const EdgeInsets.only(top: 160),
+            child: _pages[_currentIndex],
           ),
         ],
       ),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.blue[700],
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
-        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.meeting_room),
-            label: 'Rooms',
+
+      // ---------- Floating Bottom Navigation ----------
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+        height: 50,
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C5473),
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _buildNavItem(Icons.meeting_room, 'Rooms', 0),
+            _buildNavItem(Icons.book_online, 'Booking', 1),
+            _buildNavItem(Icons.pending_actions, 'Requests', 2),
+            _buildNavItem(Icons.history, 'History', 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    bool isActive = _currentIndex == index;
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(25),
+          onTap: () {
+            setState(() => _currentIndex = index);
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isActive ? Colors.white : Colors.white70,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? Colors.white : Colors.white70,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book_online),
-            label: 'Booking',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.pending_actions),
-            label: 'Requests',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-        ],
+        ),
       ),
     );
   }
