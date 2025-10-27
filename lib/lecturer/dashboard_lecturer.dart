@@ -1,67 +1,102 @@
 import 'package:flutter/material.dart';
-// 1. Update imports
-import 'booking_lecturer.dart'; 
-import 'booking_history_lecturer.dart';
 
-class DashboardLecturer extends StatefulWidget {
-  @override
-  State<DashboardLecturer> createState() => _DashboardLecturerState();
-}
+class DashboardLecturer extends StatelessWidget {
+  final VoidCallback onNavigateToAdmin;
+  final VoidCallback onNavigateToHistory;
 
-class _DashboardLecturerState extends State<DashboardLecturer> {
-  // 2. Update usage
-  final store = LecturerStore.instance; // <<< FIXED
+  const DashboardLecturer({
+    super.key,
+    required this.onNavigateToAdmin,
+    required this.onNavigateToHistory,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final total = store.history.length;
-    final approved = store.history.where((h) => h['status'] == 'Approved').length;
-    final rejected = store.history.where((h) => h['status'] == 'Rejected').length;
-    final pending = store.pending.length;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Quick Status Overview',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E2A3A),
+            ),
+          ),
+          const SizedBox(height: 20),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 1.2,
+            children: [
+              _buildStatusCard('Free Rooms', '12', const Color(0xFF26A65B), Icons.check_circle_outline),
+              _buildStatusCard('Pending Requests', '3', const Color(0xFFD4A017), Icons.rule),
+              _buildStatusCard('Approved Bookings', '24', const Color(0xFF428BCA), Icons.calendar_today),
+              _buildStatusCard('Disabled Rooms', '2', const Color(0xFFD64541), Icons.block),
+            ],
+          ),
+          const SizedBox(height: 30),
+          const Text(
+            'Quick Actions',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E2A3A),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildActionButton('Review Pending Requests', Icons.rate_review, onNavigateToAdmin),
+          const SizedBox(height: 12),
+          _buildActionButton('View My Approval History', Icons.history, onNavigateToHistory),
+        ],
+      ),
+    );
+  }
 
-    return Scaffold(
-      appBar: AppBar(title: Text('Lecturer Dashboard')),
-      body: Padding(
-        padding: EdgeInsets.all(16),
+  Widget _buildStatusCard(String title, String count, Color color, IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Assuming AppTheme.textTheme.displaySmall is defined elsewhere
-            // Text('Welcome, Lecturer 👋', style: AppTheme.textTheme.displaySmall),
-            Text('Welcome, Lecturer 👋', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), // Temporary style
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildStatCard('Total Bookings', '$total', Colors.blue),
-                _buildStatCard('Pending', '$pending', Colors.orange),
-              ],
+            Icon(icon, size: 32, color: color),
+            const Spacer(),
+            Text(
+              count,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Colors.black87,
+              ),
             ),
-            SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildStatCard('Approved', '$approved', Colors.green),
-                _buildStatCard('Rejected', '$rejected', Colors.red),
-              ],
-            ),
-            SizedBox(height: 30),
-            ElevatedButton.icon(
-              onPressed: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (_) => BookingLecturer()));
-                setState(() {}); // refresh counters after returning
-              },
-              icon: Icon(Icons.rule),
-              label: Text('Review Pending Requests'),
-            ),
-            SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (_) => BookingHistoryLecturer()));
-                setState(() {});
-              },
-              icon: Icon(Icons.history),
-              label: Text('View Booking History'),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ],
         ),
@@ -69,18 +104,24 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, Color color) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-              SizedBox(height: 4),
-              Text(title, style: TextStyle(color: Colors.grey[700])),
-            ],
+  Widget _buildActionButton(String label, IconData icon, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2C5473),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 50),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
+          elevation: 0,
         ),
       ),
     );
