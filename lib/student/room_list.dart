@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
+import '../data_store.dart';
 
 class RoomList extends StatefulWidget {
   const RoomList({super.key});
@@ -11,132 +13,129 @@ class _RoomListState extends State<RoomList> {
   String selectedTab = "All";
   String searchQuery = "";
 
-  static const Color successColor = Color(0xFF10B981);
-  static const Color warningColor = Color(0xFFF59E0B);
-  static const Color infoColor = Color(0xFF3B82F6);
-  static const Color disabledColor = Color(0xFF9CA3AF);
-
-  final List<Map<String, dynamic>> rooms = [
-    {
-      "category": "Library",
-      "title": "Lanchester Study Room",
-      "location": "2nd Floor, D1, Library",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1593642532400-2682810df593",
-    },
-    {
-      "category": "Multimedia Room",
-      "title": "Study Room 2",
-      "location": "1st Floor, C2, Multimedia Zone",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1593642532400-2682810df593",
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final filteredRooms = rooms.where((room) {
-      final matchesTab = selectedTab == "All" || room["category"] == selectedTab;
-      final matchesSearch = room["title"]
-          .toString()
+    // Get filtered rooms based on selected tab and search
+    final filteredRooms = BookingDataStore.availableRooms.where((room) {
+      final matchesTab = selectedTab == "All" || room.category == selectedTab;
+      final matchesSearch = room.name
           .toLowerCase()
           .contains(searchQuery.toLowerCase());
       return matchesTab && matchesSearch;
     }).toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xfff5f6f8),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    // Group rooms by category for "All" tab
+    final Map<String, List<BookingRoom>> groupedRooms = {};
+    if (selectedTab == "All") {
+      for (var room in BookingDataStore.availableRooms) {
+        groupedRooms.putIfAbsent(room.category, () => []).add(room);
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Hi Riley, you're at",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Search and Filter
+          Row(
             children: [
-              const Text(
-                "Hi Riley, you're at",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      onChanged: (value) => setState(() => searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: "Looking for room",
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 0),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[700],
+              Expanded(
+                child: TextField(
+                  onChanged: (value) => setState(() => searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: "Looking for room",
+                    prefixIcon: const Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
                     ),
-                    child: const Icon(Icons.filter_list, color: Colors.white),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 24),
-
+              const SizedBox(width: 8),
               Container(
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xff94A3B8),
-                  borderRadius: BorderRadius.circular(24),
+                  color: const Color(0xFF2C5473),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildTab("All"),
-                    _buildTab("Multimedia Room"),
-                    _buildTab("Library"),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              const Text(
-                "Available Rooms",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Column(
-                children: filteredRooms.map((room) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _buildRoomCard(
-                      title: room["title"],
-                      location: room["location"],
-                      imageUrl: room["imageUrl"],
-                      context: context,
-                    ),
-                  );
-                }).toList(),
+                child: const Icon(Icons.filter_list, color: Colors.white),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 24),
+
+          // Tabs - Using categories from BookingDataStore
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFE8EDF1),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                _buildTab("All"),
+                _buildTab("Library"),
+                _buildTab("Multimedia Room"),
+                _buildTab("Study Room"),
+                _buildTab("Lecture Hall"),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Show grouped rooms when "All" is selected, otherwise show filtered list
+          selectedTab == "All" 
+            ? _buildGroupedRooms(groupedRooms)
+            : _buildFilteredRooms(filteredRooms),
+        ],
       ),
+    );
+  }
+
+  Widget _buildGroupedRooms(Map<String, List<BookingRoom>> groupedRooms) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...groupedRooms.keys.map((category) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E2A3A),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...groupedRooms[category]!.map((room) => _buildRoomCard(room)),
+                const SizedBox(height: 24),
+              ],
+            )),
+      ],
+    );
+  }
+
+  Widget _buildFilteredRooms(List<BookingRoom> filteredRooms) {
+    return Column(
+      children: [
+        ...filteredRooms.map((room) => _buildRoomCard(room)),
+      ],
     );
   }
 
@@ -145,10 +144,11 @@ class _RoomListState extends State<RoomList> {
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => selectedTab = title),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.blue[700] : Colors.transparent,
+            color: isSelected ? const Color(0xFF2C5473) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Center(
@@ -157,7 +157,9 @@ class _RoomListState extends State<RoomList> {
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.w600,
+                fontSize: 10,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -165,455 +167,419 @@ class _RoomListState extends State<RoomList> {
     );
   }
 
-  Widget _buildRoomCard({
-    required String title,
-    required String location,
-    required String imageUrl,
-    required BuildContext context,
-  }) {
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
+  Widget _buildRoomCard(BookingRoom room) {
+    // Check if room has any available time slots
+    final hasAvailableSlots = room.timeSlots.any((slot) => slot.status == 'Available');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
+            // Room Image
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
-                height: 160,
-                width: double.infinity,
+              child: Image.asset(
+                room.imageUrl,
+                width: 80,
+                height: 80,
                 fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            TimeSlotDetailsPage(title: title),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 80,
+                    height: 80,
+                    color: const Color(0xFFE8EDF1),
+                    child: const Icon(
+                      Icons.photo,
+                      color: Color(0xFF2C5473),
+                      size: 30,
                     ),
-                  ),
-                  child: const Text("Book Now"),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text("See details"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.black54),
-                const SizedBox(width: 4),
-                Text(location),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class TimeSlotDetailsPage extends StatelessWidget {
-  final String title;
-  const TimeSlotDetailsPage({super.key, required this.title});
-
-  static const Color successColor = Color(0xFF10B981);
-  static const Color warningColor = Color(0xFFF59E0B);
-  static const Color infoColor = Color(0xFF3B82F6);
-  static const Color disabledColor = Color(0xFF9CA3AF);
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> timeslots = [
-      {"time": "8 ~ 10 AM", "status": "Available", "color": successColor},
-      {"time": "10 ~ 12 AM", "status": "Pending", "color": warningColor},
-      {"time": "1 ~ 3 PM", "status": "Reserved", "color": infoColor},
-      {"time": "3 ~ 5 PM", "status": "Available", "color": successColor},
-    ];
-
-    return Scaffold(
-      backgroundColor: const Color(0xffE2E8F0),
-      appBar: AppBar(
-        backgroundColor: Colors.blue[700],
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "Time Slot Details",
-          style: TextStyle(color: Colors.white),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.network(
-                  "https://images.unsplash.com/photo-1593642532400-2682810df593",
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                  );
+                },
               ),
             ),
-            const Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_on, color: Colors.black54, size: 18),
-                  SizedBox(width: 6),
-                  Text(
-                    "Library, D1, 2nd Floor",
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+            const SizedBox(width: 16),
+            
+            // Room Info
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Available Timeslots",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.black87),
+                  Text(
+                    room.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-
-                  ...timeslots.map((slot) {
-                    return GestureDetector(
-                      onTap: slot["status"] == "Available"
-                          ? () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BookingPage(
-                                    roomTitle: title,
-                                    time: slot["time"],
-                                  ),
-                                ),
-                              );
-                            }
-                          : null,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(slot["time"],
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: slot["color"],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                slot["status"] == "Available"
-                                    ? "Book Now"
-                                    : slot["status"],
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
+                  const SizedBox(height: 4),
+                  Text(
+                    room.category,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 14, color: Colors.black54),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          room.location,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
-
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Description",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.black87),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Our multimedia room provides comfy beanbags and 18-inches TV for relaxation and productivity of students. Students who carry student ID and lecturer could book for available time slots.",
-                    style: TextStyle(color: Colors.black87, height: 1.4),
+                    ],
                   ),
                 ],
               ),
             ),
+            
+            // Single Book Now Button
+            ElevatedButton(
+              onPressed: hasAvailableSlots ? () {
+                _navigateToTimeSlots(context, room);
+              } : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2C5473),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'Book Now',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  void _navigateToTimeSlots(BuildContext context, BookingRoom room) {
+    // Navigate to time slot selection page
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TimeSlotSelectionPage(room: room),
+      ),
+    );
+  }
 }
 
-class BookingPage extends StatefulWidget {
-  final String roomTitle;
-  final String time;
+// Time Slot Selection Page (Keep the same as before)
+class TimeSlotSelectionPage extends StatelessWidget {
+  final BookingRoom room;
 
-  const BookingPage({super.key, required this.roomTitle, required this.time});
-
-  @override
-  State<BookingPage> createState() => _BookingPageState();
-}
-
-class _BookingPageState extends State<BookingPage> {
-  bool booked = false;
-  DateTime selectedDate = DateTime.now();
+  const TimeSlotSelectionPage({super.key, required this.room});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.blue[700],
-        foregroundColor: Colors.white,
-        title: const Text("Booking"),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    "https://images.unsplash.com/photo-1593642532400-2682810df593",
-                    height: 120,
-                    width: 120,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.roomTitle,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: booked ? Colors.orange : Colors.blue,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(booked ? "Pending" : "Free",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+      backgroundColor: const Color(0xFFF9FAFA),
+      body: Stack(
+        children: [
+          // Header
+          Container(
+            height: 150,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C5473),
+              borderRadius: BorderRadius.only(
+                bottomRight: Radius.circular(100),
+              ),
+            ),
+            child: SafeArea(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      room.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
                       ),
-                      const SizedBox(height: 8),
-                      const Row(
-                        children: [
-                          Icon(Icons.location_on,
-                              color: Colors.black54, size: 18),
-                          SizedBox(width: 6),
-                          Text("Library, D1, 2nd Floor",
-                              style: TextStyle(color: Colors.black54)),
-                        ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 8,
+                    top: 4,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Body
+          Padding(
+            padding: const EdgeInsets.only(top: 160),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Room Image
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        room.imageUrl,
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 180,
+                            color: const Color(0xFFE8EDF1),
+                            child: const Icon(
+                              Icons.photo,
+                              size: 50,
+                              color: Color(0xFF2C5473),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Location
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.black54, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        room.location,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-            const Text("Booking Date",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null) {
-                  setState(() => selectedDate = picked);
-                }
-              },
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2))
-                  ],
-                ),
-                child: Text(
-                  "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
-                  style: const TextStyle(fontSize: 16),
-                ),
+                  // Time Slots
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Available Time Slots",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ...room.timeSlots.map((slot) => _buildTimeSlotCard(slot, context)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Description
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12.withOpacity(0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Description",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          room.description,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        booked ? Colors.green : Colors.blue[700],
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 100, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12))),
-                onPressed: () {
-                  setState(() => booked = true);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text("Booked Successfully!"),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                  ));
-                },
-                child: Text(
-                  booked ? "Booked Successfully" : "Book",
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            if (booked) _buildBookingDetail(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBookingDetail() {
-    final dateText =
-        "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}";
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Booking Detail",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 10),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 5,
-                offset: const Offset(0, 3),
-              ),
-            ],
+  Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow("Room Name", widget.roomTitle),
-              _buildDetailRow("Booking Date", dateText),
-              _buildDetailRow("Booking Time", widget.time),
-              _buildDetailRow("Booked By", "Riley"),
-            ],
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: slot.color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            _getStatusIcon(slot.status),
+            color: slot.color,
           ),
         ),
-      ],
+        title: Text(
+          slot.time,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          slot.status,
+          style: TextStyle(
+            color: slot.color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: slot.status == 'Available'
+            ? ElevatedButton(
+                onPressed: () {
+                  _bookTimeSlot(context, slot);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C5473),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Book',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : null,
+      ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w500, fontSize: 15)),
-          Text(value,
-              style: const TextStyle(fontSize: 15, color: Colors.black87)),
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'Available':
+        return Icons.check_circle;
+      case 'Booked':
+        return Icons.block;
+      case 'Pending':
+        return Icons.pending;
+      default:
+        return Icons.help;
+    }
+  }
+
+  void _bookTimeSlot(BuildContext context, TimeSlot slot) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Booking'),
+        content: Text('Book ${room.name} for ${slot.time}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Successfully booked ${room.name} for ${slot.time}'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Confirm'),
+          ),
         ],
       ),
     );
