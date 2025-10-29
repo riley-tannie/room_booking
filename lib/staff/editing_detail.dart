@@ -1,6 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:room_booking/staff/room_detail.dart';
+import 'data_store.dart';
 
-class EditingDetailPage extends StatelessWidget {
+class EditingDetailPage extends StatefulWidget {
+  final BookingRoom room;
+
+  const EditingDetailPage({Key? key, required this.room}) : super(key: key);
+
+  @override
+  _EditingDetailPageState createState() => _EditingDetailPageState();
+}
+
+class _EditingDetailPageState extends State<EditingDetailPage> {
+  final TextEditingController _roomNameController = TextEditingController();
+  final TextEditingController _roomLocationController = TextEditingController();
+  final TextEditingController _roomDescriptionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _roomNameController.text = widget.room.name;
+    _roomLocationController.text = widget.room.location;
+    _roomDescriptionController.text = widget.room.description;
+  }
+
+  @override
+  void dispose() {
+    _roomNameController.dispose();
+    _roomLocationController.dispose();
+    _roomDescriptionController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,7 +118,7 @@ class EditingDetailPage extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Image.asset(
-          'assets/images/study_room1.jpg',
+          widget.room.imageUrl,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Container(
@@ -118,6 +149,9 @@ class EditingDetailPage extends StatelessWidget {
   }
 
   Widget _buildRoomCard() {
+    final freeSlots = widget.room.timeSlots.where((slot) => slot.status == 'free').length;
+    final totalSlots = widget.room.timeSlots.length;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -138,8 +172,8 @@ class EditingDetailPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lanchester Study Room',
-                  style: TextStyle(
+                  widget.room.name,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -147,15 +181,15 @@ class EditingDetailPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Pending',
+                  '$freeSlots/$totalSlots slots available',
                   style: TextStyle(
-                    color: Colors.orange,
+                    color: freeSlots > 0 ? Colors.green : Colors.orange,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Library',
+                  widget.room.location,
                   style: TextStyle(
                     color: Colors.grey[600],
                   ),
@@ -169,7 +203,12 @@ class EditingDetailPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) =>RoomDetailPage(room: widget.room)),
+                );
+              },
               child: const Text(
                 'See details',
                 style: TextStyle(
@@ -210,9 +249,9 @@ class EditingDetailPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildFormField('Room Name', 'Type your room name'),
-          _buildFormField('Booking status', 'Type your status'),
-          _buildFormField('Location', 'Type your location'),
+          _buildFormField(_roomNameController, 'Room Name', 'Type your room name'),
+          _buildFormField(_roomLocationController, 'Location', 'Type your location'),
+          _buildFormField(_roomDescriptionController, 'Description', 'Type room description'),
           const SizedBox(height: 16),
           Center(
             child: ElevatedButton(
@@ -226,9 +265,9 @@ class EditingDetailPage extends StatelessWidget {
                   vertical: 12,
                 ),
               ),
-              onPressed: () {},
+              onPressed: _updateRoom,
               child: const Text(
-                'Edit',
+                'Update',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -241,7 +280,7 @@ class EditingDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildFormField(String label, String hint) {
+  Widget _buildFormField(TextEditingController controller, String label, String hint) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -256,6 +295,7 @@ class EditingDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           TextField(
+            controller: controller,
             decoration: InputDecoration(
               hintText: hint,
               filled: true,
@@ -273,5 +313,27 @@ class EditingDetailPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _updateRoom() {
+    if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in room name and location')),
+      );
+      return;
+    }
+
+    StaffDataStore.updateRoom(
+      widget.room.id,
+      _roomNameController.text,
+      _roomLocationController.text,
+      _roomDescriptionController.text.isEmpty ? widget.room.description : _roomDescriptionController.text,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Room updated successfully')),
+    );
+
+    Navigator.pop(context);
   }
 }

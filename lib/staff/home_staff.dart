@@ -4,6 +4,7 @@ import 'booking_history.dart';
 import 'profile.dart';
 import 'room_detail.dart';
 import 'edit.dart';
+import 'data_store.dart';
 
 class HomeStaff extends StatefulWidget {
   @override
@@ -13,21 +14,18 @@ class HomeStaff extends StatefulWidget {
 class _HomeStaffState extends State<HomeStaff> {
   int _currentIndex = 0; // Room List is first
 
-  // Map room names to asset images
-  final Map<String, String> _roomImages = {
-    'Study Room 2': 'assets/images/study_room2.jpg',
-    'Multimedia Room 1': 'assets/images/multimedia_1.jpg',
-    'Study Room': 'assets/images/study_room3.jpg',
-    'Lanchester Study Room': 'assets/images/study_room1.jpg',
-    'Lecture Hall 1': 'assets/images/lecture_hall1.jpg',
-    'Lecture Hall 2': 'assets/images/lecture_hall2.jpg',
-  };
-
-  // Default image if specific room image is not found
-  final String _defaultRoomImage = 'assets/images/study_room1.jpg';
-
   @override
   Widget build(BuildContext context) {
+    // Get available rooms (not disabled)
+    final availableRooms = StaffDataStore.availableRooms.where((room) => !room.isDisabled).toList();
+    
+    // Group rooms by category
+    final multimediaRooms = availableRooms.where((room) => room.category == 'Multimedia Room').toList();
+    final libraryRooms = availableRooms.where((room) => room.category == 'Library').toList();
+    final studyRooms = availableRooms.where((room) => room.category == 'Study Room').toList();
+    final lectureHalls = availableRooms.where((room) => room.category == 'Lecture Hall').toList();
+    final conferenceRooms = availableRooms.where((room) => room.category == 'Conference Room').toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
@@ -86,21 +84,29 @@ class _HomeStaffState extends State<HomeStaff> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildRoomSection(
-                    'Multimedia Room',
-                    [
-                      _RoomItem('Study Room 2', 'Study Room', 'See details'),
-                      _RoomItem('Multimedia Room 1', 'Multiweek', 'See details'),
-                      _RoomItem('Study Room', 'Multimedia Room 1', 'See details'),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _buildRoomSection(
-                    'Library',
-                    [
-                      _RoomItem('Lanchester Study Room', 'Library', 'See details'),
-                    ],
-                  ),
+                  if (multimediaRooms.isNotEmpty)
+                    _buildRoomSection('Multimedia Room', multimediaRooms),
+                  
+                  if (libraryRooms.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRoomSection('Library', libraryRooms),
+                  ],
+                  
+                  if (studyRooms.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRoomSection('Study Room', studyRooms),
+                  ],
+                  
+                  if (lectureHalls.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRoomSection('Lecture Hall', lectureHalls),
+                  ],
+                  
+                  if (conferenceRooms.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRoomSection('Conference Room', conferenceRooms),
+                  ],
+                  
                   const SizedBox(height: 24),
                   _buildReservedSection(),
                 ],
@@ -194,7 +200,7 @@ class _HomeStaffState extends State<HomeStaff> {
     );
   }
 
-  Widget _buildRoomSection(String title, List<_RoomItem> rooms) {
+  Widget _buildRoomSection(String title, List<BookingRoom> rooms) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -213,28 +219,29 @@ class _HomeStaffState extends State<HomeStaff> {
   }
 
   Widget _buildReservedSection() {
+    // Get rooms with reserved/pending slots
+    final reservedRooms = StaffDataStore.availableRooms.where((room) {
+      return room.timeSlots.any((slot) => slot.status == 'reserved' || slot.status == 'pending');
+    }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Reserved Rooms',
-          style: const TextStyle(
+        const Text(
+          'Reserved & Pending Rooms',
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.orange,
           ),
         ),
         const SizedBox(height: 12),
-        _buildReservedRoomCard('Lanchester Study Room', 'Library'),
-        _buildReservedRoomCard('Lecture Hall 1', 'C2'),
-        _buildReservedRoomCard('Lecture Hall 2', 'C4'),
+        ...reservedRooms.map((room) => _buildReservedRoomCard(room)),
       ],
     );
   }
 
-  Widget _buildRoomCard(_RoomItem room) {
-    String imagePath = _roomImages[room.name] ?? _defaultRoomImage;
-    
+  Widget _buildRoomCard(BookingRoom room) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -256,7 +263,7 @@ class _HomeStaffState extends State<HomeStaff> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                imagePath,
+                room.imageUrl,
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
@@ -293,6 +300,8 @@ class _HomeStaffState extends State<HomeStaff> {
                       color: Colors.grey[600],
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  _buildRoomStatus(room),
                 ],
               ),
             ),
@@ -306,7 +315,7 @@ class _HomeStaffState extends State<HomeStaff> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => RoomDetailPage()),
+                  MaterialPageRoute(builder: (_) => RoomDetailPage(room: room)),
                 );
               },
               child: const Text(
@@ -322,8 +331,8 @@ class _HomeStaffState extends State<HomeStaff> {
     );
   }
 
-  Widget _buildReservedRoomCard(String roomName, String location) {
-    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+  Widget _buildReservedRoomCard(BookingRoom room) {
+    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved' || slot.status == 'pending').toList();
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -346,7 +355,7 @@ class _HomeStaffState extends State<HomeStaff> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                imagePath,
+                room.imageUrl,
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
@@ -370,7 +379,7 @@ class _HomeStaffState extends State<HomeStaff> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    roomName,
+                    room.name,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -378,9 +387,17 @@ class _HomeStaffState extends State<HomeStaff> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    location,
+                    room.location,
                     style: TextStyle(
                       color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${reservedSlots.length} slot(s) ${reservedSlots.any((slot) => slot.status == 'reserved') ? 'Reserved' : 'Pending'}',
+                    style: const TextStyle(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -390,7 +407,7 @@ class _HomeStaffState extends State<HomeStaff> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => RoomDetailPage()),
+                  MaterialPageRoute(builder: (_) => RoomDetailPage(room: room)),
                 );
               },
               child: const Text(
@@ -406,12 +423,17 @@ class _HomeStaffState extends State<HomeStaff> {
       ),
     );
   }
-}
 
-class _RoomItem {
-  final String name;
-  final String location;
-  final String action;
-
-  _RoomItem(this.name, this.location, this.action);
+  Widget _buildRoomStatus(BookingRoom room) {
+    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final totalSlots = room.timeSlots.length;
+    
+    return Text(
+      '$freeSlots/$totalSlots slots available',
+      style: TextStyle(
+        color: freeSlots > 0 ? Colors.green : Colors.red,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
 }

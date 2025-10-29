@@ -3,6 +3,7 @@ import 'home_staff.dart';
 import 'booking_history.dart';
 import 'profile.dart';
 import 'edit.dart';
+import 'data_store.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -16,6 +17,8 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final stats = StaffDataStore.getDashboardStats();
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
@@ -74,7 +77,7 @@ class _DashboardState extends State<Dashboard> {
             child: Column(
               children: [
                 const Text(
-                  'All Status of Rooms',
+                  'All Status of Rooms Today',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -97,28 +100,28 @@ class _DashboardState extends State<Dashboard> {
                       _buildStatusCard(
                         Icons.pie_chart,
                         'Available',
-                        '7',
+                        stats['available'].toString(),
                         const Color(0xFFB9EACF),
                         const Color(0xFF26A65B),
                       ),
                       _buildStatusCard(
                         Icons.bar_chart,
                         'Pending',
-                        '6',
+                        stats['pending'].toString(),
                         const Color(0xFFF6E1A6),
                         const Color(0xFFD4A017),
                       ),
                       _buildStatusCard(
                         Icons.remove_circle_outline,
                         'Reserved',
-                        '6',
+                        stats['reserved'].toString(),
                         const Color(0xFFCCE5F8),
                         const Color(0xFF428BCA),
                       ),
                       _buildStatusCard(
                         Icons.visibility_off,
                         'Disabled',
-                        '5',
+                        stats['disabled'].toString(),
                         const Color(0xFFF8C1C1),
                         const Color(0xFFD64541),
                       ),
