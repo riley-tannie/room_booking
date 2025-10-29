@@ -202,25 +202,25 @@ class _BookingState extends State<Booking> {
         return BookingDataStore.availableRooms.where((room) {
           if (room.isDisabled) return false;
           final hasAvailableSlots = room.timeSlots.any((slot) => 
-              slot.status == 'Available' && 
-              _isSlotAvailableForBooking(slot, now));
+              slot.status == 'free' && 
+              BookingDataStore.isTimeSlotAvailable(slot));
           return hasAvailableSlots && BookingDataStore.canStudentBookToday();
         }).toList();
       
       case "Pending":
         return BookingDataStore.availableRooms.where((room) {
           final hasPendingSlots = room.timeSlots.any((slot) => 
-              slot.status == 'Pending' && 
+              slot.status == 'pending' && 
               _isSameDay(slot.bookedDate ?? now, now));
           return hasPendingSlots;
         }).toList();
       
       case "Reserved":
         return BookingDataStore.availableRooms.where((room) {
-          final hasBookedSlots = room.timeSlots.any((slot) => 
-              slot.status == 'Booked' && 
+          final hasReservedSlots = room.timeSlots.any((slot) => 
+              slot.status == 'reserved' && 
               _isSameDay(slot.bookedDate ?? now, now));
-          return hasBookedSlots;
+          return hasReservedSlots;
         }).toList();
       
       case "Disabled":
@@ -229,12 +229,6 @@ class _BookingState extends State<Booking> {
       default:
         return BookingDataStore.availableRooms;
     }
-  }
-
-  bool _isSlotAvailableForBooking(TimeSlot slot, DateTime now) {
-    // Check if slot hasn't expired
-    final slotEndTime = DateTime(now.year, now.month, now.day, slot.endHour);
-    return now.isBefore(slotEndTime);
   }
 
   Widget _buildTab(String title) {
@@ -266,8 +260,8 @@ class _BookingState extends State<Booking> {
 
   Widget _buildRoomCard(BuildContext context, BookingRoom room) {
     final availableSlots = room.timeSlots.where((slot) => 
-        slot.status == 'Available' && 
-        _isSlotAvailableForBooking(slot, DateTime.now())).length;
+        slot.status == 'free' && 
+        BookingDataStore.isTimeSlotAvailable(slot)).length;
     
     final isAvailable = availableSlots > 0 && 
                        !room.isDisabled && 
@@ -418,15 +412,15 @@ class _BookingState extends State<Booking> {
     
     final now = DateTime.now();
     final hasPending = room.timeSlots.any((slot) => 
-        slot.status == 'Pending' && _isSameDay(slot.bookedDate ?? now, now));
-    final hasBooked = room.timeSlots.any((slot) => 
-        slot.status == 'Booked' && _isSameDay(slot.bookedDate ?? now, now));
+        slot.status == 'pending' && _isSameDay(slot.bookedDate ?? now, now));
+    final hasReserved = room.timeSlots.any((slot) => 
+        slot.status == 'reserved' && _isSameDay(slot.bookedDate ?? now, now));
     
     if (hasPending) return const Color(0xFFD4A017);
-    if (hasBooked) return const Color(0xFF428BCA);
+    if (hasReserved) return const Color(0xFF428BCA);
     
     final hasAvailable = room.timeSlots.any((slot) => 
-        slot.status == 'Available' && _isSlotAvailableForBooking(slot, now));
+        slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot));
     
     return hasAvailable ? const Color(0xFF26A65B) : const Color(0xFFD64541);
   }
@@ -436,15 +430,15 @@ class _BookingState extends State<Booking> {
     
     final now = DateTime.now();
     final hasPending = room.timeSlots.any((slot) => 
-        slot.status == 'Pending' && _isSameDay(slot.bookedDate ?? now, now));
-    final hasBooked = room.timeSlots.any((slot) => 
-        slot.status == 'Booked' && _isSameDay(slot.bookedDate ?? now, now));
+        slot.status == 'pending' && _isSameDay(slot.bookedDate ?? now, now));
+    final hasReserved = room.timeSlots.any((slot) => 
+        slot.status == 'reserved' && _isSameDay(slot.bookedDate ?? now, now));
     
     if (hasPending) return "Pending";
-    if (hasBooked) return "Reserved";
+    if (hasReserved) return "Reserved";
     
     final hasAvailable = room.timeSlots.any((slot) => 
-        slot.status == 'Available' && _isSlotAvailableForBooking(slot, now));
+        slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot));
     
     return hasAvailable ? "Available" : "Full";
   }
@@ -475,9 +469,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final availableSlots = widget.room.timeSlots.where((slot) => 
-        slot.status == 'Available' && 
-        _isSlotAvailableForBooking(slot, now)).toList();
+    final availableSlots = BookingDataStore.getAvailableTimeSlots(widget.room.id);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
@@ -750,7 +742,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
 
   Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context) {
     final now = DateTime.now();
-    final isExpired = !_isSlotAvailableForBooking(slot, now);
+    final isExpired = !BookingDataStore.isTimeSlotAvailable(slot);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -788,7 +780,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
           ),
         ),
         subtitle: Text(
-          isExpired ? 'Expired' : slot.status,
+          isExpired ? 'Expired' : slot.displayStatus,
           style: TextStyle(
             color: isExpired ? Colors.grey : slot.color,
             fontWeight: FontWeight.w600,
@@ -818,11 +810,6 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
     );
   }
 
-  bool _isSlotAvailableForBooking(TimeSlot slot, DateTime now) {
-    final slotEndTime = DateTime(now.year, now.month, now.day, slot.endHour);
-    return now.isBefore(slotEndTime);
-  }
-
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
            date1.month == date2.month &&
@@ -835,11 +822,13 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'Available':
+      case 'free':
         return Icons.check_circle;
-      case 'Pending':
+      case 'pending':
         return Icons.pending;
-      case 'Booked':
+      case 'reserved':
+        return Icons.block;
+      case 'disabled':
         return Icons.block;
       default:
         return Icons.help;
@@ -898,33 +887,42 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
   }
 
   void _confirmBooking(BuildContext context, TimeSlot slot) {
-    // Create the booking
-    final booking = UserBooking(
-      id: 'booking_${DateTime.now().millisecondsSinceEpoch}',
-      roomName: widget.room.name,
-      roomId: widget.room.id,
-      date: DateTime.now(),
-      timeSlot: slot.time,
-      studentName: BookingDataStore.currentStudentName,
-      studentId: BookingDataStore.currentStudentId,
-      status: 'Pending', 
-      bookedAt: DateTime.now(),
-    );
+    try {
+      // Create the booking
+      final booking = UserBooking(
+        id: 'booking_${DateTime.now().millisecondsSinceEpoch}',
+        roomName: widget.room.name,
+        roomId: widget.room.id,
+        date: DateTime.now(),
+        timeSlot: slot.time,
+        studentName: BookingDataStore.currentStudentName,
+        studentId: BookingDataStore.currentStudentId,
+        status: 'Pending', 
+        bookedAt: DateTime.now(),
+      );
 
-    // Add booking to history and update room status
-    BookingDataStore.addBooking(booking);
-    
-    // Close dialog and go back to booking page
-    Navigator.pop(context); // Close dialog
-    Navigator.pop(context); // Go back to booking page
-    
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Successfully booked ${widget.room.name} for ${slot.time}. Status: Pending'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      // Add booking to history and update room status
+      BookingDataStore.addBooking(booking);
+      
+      // Close dialog and go back to booking page
+      Navigator.pop(context); // Close dialog
+      Navigator.pop(context); // Go back to booking page
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully booked ${widget.room.name} for ${slot.time}. Status: Pending'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

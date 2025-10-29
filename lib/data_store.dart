@@ -24,21 +24,45 @@ class BookingRoom {
 }
 
 class TimeSlot {
-  final String time;
-  final String status; // Available, Booked, Pending
-  final Color color;
+  final String time; // "8-10", "10-12", "13-15", "15-17"
+  String status; // "free", "pending", "reserved", "disabled"
   final int startHour;
   final int endHour;
-  final DateTime? bookedDate;
+  String? studentId;
+  DateTime? bookedDate;
+  String? bookingId;
 
-  const TimeSlot({
+  TimeSlot({
     required this.time,
     required this.status,
-    required this.color,
     required this.startHour,
     required this.endHour,
+    this.studentId,
     this.bookedDate,
+    this.bookingId,
   });
+
+  // Get color based on status
+  Color get color {
+    switch (status) {
+      case 'free': return Colors.green;
+      case 'pending': return Colors.orange;
+      case 'reserved': return Colors.red;
+      case 'disabled': return Colors.grey;
+      default: return Colors.green;
+    }
+  }
+
+  // Get display text for status
+  String get displayStatus {
+    switch (status) {
+      case 'free': return 'Available';
+      case 'pending': return 'Pending';
+      case 'reserved': return 'Reserved';
+      case 'disabled': return 'Disabled';
+      default: return 'Available';
+    }
+  }
 }
 
 class UserBooking {
@@ -49,10 +73,10 @@ class UserBooking {
   final String timeSlot;
   final String studentName;
   final String studentId;
-  final String status; // Pending, Approved, Rejected
+  String status; // "Pending", "Approved", "Rejected"
   final DateTime bookedAt;
 
-  const UserBooking({
+  UserBooking({
     required this.id,
     required this.roomName,
     required this.roomId,
@@ -67,7 +91,7 @@ class UserBooking {
 
 // --- Booking Data Store ---
 class BookingDataStore {
-  // Available rooms for booking
+  // Available rooms for booking - ALL ROOMS AVAILABLE INITIALLY
   static List<BookingRoom> availableRooms = [
     BookingRoom(
       id: 'room_001',
@@ -76,12 +100,7 @@ class BookingDataStore {
       location: '2nd Floor, D1, Library',
       imageUrl: 'assets/images/study_room1.jpg',
       description: 'A quiet study room with individual desks and power outlets. Perfect for focused studying and research work.',
-      timeSlots: [
-        TimeSlot(time: '8:00 - 10:00 AM', status: 'Available', color: Colors.green, startHour: 8, endHour: 10),
-        TimeSlot(time: '10:00 - 12:00 PM', status: 'Booked', color: Colors.red, startHour: 10, endHour: 12),
-        TimeSlot(time: '1:00 - 3:00 PM', status: 'Available', color: Colors.green, startHour: 13, endHour: 15),
-        TimeSlot(time: '3:00 - 5:00 PM', status: 'Pending', color: Colors.orange, startHour: 15, endHour: 17),
-      ],
+      timeSlots: _createDefaultTimeSlots(),
     ),
     BookingRoom(
       id: 'room_002',
@@ -90,12 +109,7 @@ class BookingDataStore {
       location: '1st Floor, C2, Multimedia Zone',
       imageUrl: 'assets/images/multimedia_1.jpg',
       description: 'Equipped with large screen displays, audio systems, and presentation tools. Ideal for group presentations and multimedia projects.',
-      timeSlots: [
-        TimeSlot(time: '8:00 - 10:00 AM', status: 'Booked', color: Colors.red, startHour: 8, endHour: 10),
-        TimeSlot(time: '10:00 - 12:00 PM', status: 'Available', color: Colors.green, startHour: 10, endHour: 12),
-        TimeSlot(time: '1:00 - 3:00 PM', status: 'Available', color: Colors.green, startHour: 13, endHour: 15),
-        TimeSlot(time: '3:00 - 5:00 PM', status: 'Booked', color: Colors.red, startHour: 15, endHour: 17),
-      ],
+      timeSlots: _createDefaultTimeSlots(),
     ),
     BookingRoom(
       id: 'room_003',
@@ -104,12 +118,7 @@ class BookingDataStore {
       location: 'Ground Floor, B1, Study Area',
       imageUrl: 'assets/images/study_room2.jpg',
       description: 'Small collaborative space with whiteboards and comfortable seating. Great for group discussions and team projects.',
-      timeSlots: [
-        TimeSlot(time: '8:00 - 10:00 AM', status: 'Available', color: Colors.green, startHour: 8, endHour: 10),
-        TimeSlot(time: '10:00 - 12:00 PM', status: 'Available', color: Colors.green, startHour: 10, endHour: 12),
-        TimeSlot(time: '1:00 - 3:00 PM', status: 'Pending', color: Colors.orange, startHour: 13, endHour: 15),
-        TimeSlot(time: '3:00 - 5:00 PM', status: 'Available', color: Colors.green, startHour: 15, endHour: 17),
-      ],
+      timeSlots: _createDefaultTimeSlots(),
     ),
     BookingRoom(
       id: 'room_004',
@@ -118,12 +127,7 @@ class BookingDataStore {
       location: '3rd Floor, E1, Academic Wing',
       imageUrl: 'assets/images/lecture_hall1.jpg',
       description: 'Large capacity hall with projector and sound system. Suitable for workshops, seminars, and large group activities.',
-      timeSlots: [
-        TimeSlot(time: '8:00 - 10:00 AM', status: 'Booked', color: Colors.red, startHour: 8, endHour: 10),
-        TimeSlot(time: '10:00 - 12:00 PM', status: 'Booked', color: Colors.red, startHour: 10, endHour: 12),
-        TimeSlot(time: '1:00 - 3:00 PM', status: 'Available', color: Colors.green, startHour: 13, endHour: 15),
-        TimeSlot(time: '3:00 - 5:00 PM', status: 'Available', color: Colors.green, startHour: 15, endHour: 17),
-      ],
+      timeSlots: _createDefaultTimeSlots(),
     ),
     BookingRoom(
       id: 'room_005',
@@ -132,172 +136,143 @@ class BookingDataStore {
       location: '4th Floor, F1, Admin Building',
       imageUrl: 'assets/images/study_room3.jpg',
       description: 'Professional meeting space with video conferencing capabilities and executive seating.',
-      isDisabled: true,
-      timeSlots: [
-        TimeSlot(time: '8:00 - 10:00 AM', status: 'Booked', color: Colors.red, startHour: 8, endHour: 10),
-        TimeSlot(time: '10:00 - 12:00 PM', status: 'Booked', color: Colors.red, startHour: 10, endHour: 12),
-        TimeSlot(time: '1:00 - 3:00 PM', status: 'Booked', color: Colors.red, startHour: 13, endHour: 15),
-        TimeSlot(time: '3:00 - 5:00 PM', status: 'Booked', color: Colors.red, startHour: 15, endHour: 17),
-      ],
+      timeSlots: _createDefaultTimeSlots(),
     ),
   ];
 
-  // User's current bookings
-  static List<UserBooking> userBookings = [
-    UserBooking(
-      id: 'booking_001',
-      roomName: 'Multimedia Room 1',
-      roomId: 'room_002',
-      date: DateTime.now(),
-      timeSlot: '10:00 - 12:00 PM',
-      studentName: 'Riley Tan',
-      studentId: 'STU12345',
-      status: 'Approved',
-      bookedAt: DateTime.now(),
-    ),
-    UserBooking(
-      id: 'booking_002',
-      roomName: 'Study Room 2',
-      roomId: 'room_003',
-      date: DateTime.now().add(const Duration(days: 1)),
-      timeSlot: '1:00 - 3:00 PM',
-      studentName: 'Riley Tan',
-      studentId: 'STU12345',
-      status: 'Pending',
-      bookedAt: DateTime.now(),
-    ),
-  ];
+  // User's current bookings - EMPTY INITIALLY
+  static List<UserBooking> userBookings = [];
 
   // Current student info
   static const String currentStudentName = 'Riley Tan';
   static const String currentStudentId = 'STU12345';
 
-  // Helper methods
-  static List<BookingRoom> getRoomsByCategory(String category) {
-    if (category == 'All') return availableRooms;
-    return availableRooms.where((room) => room.category == category).toList();
+  // Helper method to create default time slots (all free)
+  static List<TimeSlot> _createDefaultTimeSlots() {
+    return [
+      TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+      TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+      TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+      TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
+    ];
   }
 
+  // Check if student can book today
+  static bool canStudentBookToday() {
+    final now = DateTime.now();
+    return !userBookings.any((booking) => 
+        _isSameDay(booking.date, now) && 
+        booking.studentId == currentStudentId);
+  }
+
+  // Check if time slot is available for booking (not expired)
+  static bool isTimeSlotAvailable(TimeSlot slot) {
+    final now = DateTime.now();
+    
+    // Check if slot is disabled
+    if (slot.status == 'disabled') return false;
+    
+    // Check if slot is already booked
+    if (slot.status != 'free') return false;
+    
+    // Check if current time is past slot end time
+    final slotEndTime = DateTime(now.year, now.month, now.day, slot.endHour);
+    if (now.isAfter(slotEndTime)) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Get available time slots for a room (considering expiry)
   static List<TimeSlot> getAvailableTimeSlots(String roomId) {
     final room = availableRooms.firstWhere((room) => room.id == roomId);
-    return room.timeSlots.where((slot) => slot.status == 'Available').toList();
+    return room.timeSlots.where((slot) => isTimeSlotAvailable(slot)).toList();
   }
 
+  // Book a time slot
   static void addBooking(UserBooking booking) {
+    if (!canStudentBookToday()) {
+      throw Exception('You can only book one slot per day');
+    }
+
     userBookings.add(booking);
     
-    // Update room availability
+    // Update room time slot status
     final roomIndex = availableRooms.indexWhere((room) => room.id == booking.roomId);
     if (roomIndex != -1) {
       final room = availableRooms[roomIndex];
-      final updatedTimeSlots = room.timeSlots.map((slot) {
-        if (slot.time == booking.timeSlot) {
-          return TimeSlot(
-            time: slot.time, 
-            status: 'Pending', 
-            color: Colors.orange,
-            startHour: slot.startHour,
-            endHour: slot.endHour,
-            bookedDate: booking.date,
-          );
-        }
-        return slot;
-      }).toList();
+      final slotIndex = room.timeSlots.indexWhere((slot) => slot.time == booking.timeSlot);
       
-      availableRooms[roomIndex] = BookingRoom(
-        id: room.id,
-        name: room.name,
-        category: room.category,
-        location: room.location,
-        imageUrl: room.imageUrl,
-        description: room.description,
-        timeSlots: updatedTimeSlots,
-        isDisabled: room.isDisabled,
-      );
+      if (slotIndex != -1) {
+        room.timeSlots[slotIndex].status = 'pending';
+        room.timeSlots[slotIndex].studentId = booking.studentId;
+        room.timeSlots[slotIndex].bookedDate = booking.date;
+        room.timeSlots[slotIndex].bookingId = booking.id;
+      }
     }
   }
 
+  // Cancel a booking
   static void cancelBooking(String bookingId) {
     final booking = userBookings.firstWhere((b) => b.id == bookingId);
     userBookings.removeWhere((b) => b.id == bookingId);
     
-    // Update room availability
+    // Update room time slot status back to free
     final roomIndex = availableRooms.indexWhere((room) => room.id == booking.roomId);
     if (roomIndex != -1) {
       final room = availableRooms[roomIndex];
-      final updatedTimeSlots = room.timeSlots.map((slot) {
-        if (slot.time == booking.timeSlot) {
-          return TimeSlot(
-            time: slot.time, 
-            status: 'Available', 
-            color: Colors.green,
-            startHour: slot.startHour,
-            endHour: slot.endHour,
-          );
-        }
-        return slot;
-      }).toList();
+      final slotIndex = room.timeSlots.indexWhere((slot) => slot.bookingId == bookingId);
       
-      availableRooms[roomIndex] = BookingRoom(
-        id: room.id,
-        name: room.name,
-        category: room.category,
-        location: room.location,
-        imageUrl: room.imageUrl,
-        description: room.description,
-        timeSlots: updatedTimeSlots,
-        isDisabled: room.isDisabled,
-      );
+      if (slotIndex != -1) {
+        room.timeSlots[slotIndex].status = 'free';
+        room.timeSlots[slotIndex].studentId = null;
+        room.timeSlots[slotIndex].bookedDate = null;
+        room.timeSlots[slotIndex].bookingId = null;
+      }
     }
   }
 
-  static bool canStudentBookToday() {
-    final now = DateTime.now();
-    return !userBookings.any((booking) => 
-        booking.date.year == now.year &&
-        booking.date.month == now.month &&
-        booking.date.day == now.day);
-  }
-
+  // Get today's booking for current student
   static UserBooking? getTodayBooking() {
     final now = DateTime.now();
     try {
       return userBookings.firstWhere((booking) => 
-          booking.date.year == now.year &&
-          booking.date.month == now.month &&
-          booking.date.day == now.day);
+          _isSameDay(booking.date, now) && 
+          booking.studentId == currentStudentId);
     } catch (e) {
       return null;
     }
   }
 
+  // Reset all rooms for next day
   static void resetRoomsForNextDay() {
-    // This would typically reset room availability for a new day
-    // For now, we'll just reset some slots to available
-    availableRooms = availableRooms.map((room) {
-      final updatedTimeSlots = room.timeSlots.map((slot) {
-        if (slot.status == 'Pending' || slot.status == 'Booked') {
-          return TimeSlot(
-            time: slot.time,
-            status: 'Available',
-            color: Colors.green,
-            startHour: slot.startHour,
-            endHour: slot.endHour,
-          );
+    for (final room in availableRooms) {
+      for (final slot in room.timeSlots) {
+        if (slot.status != 'disabled') {
+          slot.status = 'free';
+          slot.studentId = null;
+          slot.bookedDate = null;
+          slot.bookingId = null;
         }
-        return slot;
-      }).toList();
-      
-      return BookingRoom(
-        id: room.id,
-        name: room.name,
-        category: room.category,
-        location: room.location,
-        imageUrl: room.imageUrl,
-        description: room.description,
-        timeSlots: updatedTimeSlots,
-        isDisabled: room.isDisabled,
-      );
-    }).toList();
+      }
+    }
+    
+    // Clear today's bookings (keep history for records)
+    final now = DateTime.now();
+    userBookings.removeWhere((booking) => _isSameDay(booking.date, now));
+  }
+
+  // Get rooms by category
+  static List<BookingRoom> getRoomsByCategory(String category) {
+    if (category == 'All') return availableRooms;
+    return availableRooms.where((room) => room.category == category).toList();
+  }
+
+  // Helper method to check if two dates are the same day
+  static bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
   }
 }
