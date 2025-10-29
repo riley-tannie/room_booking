@@ -76,7 +76,7 @@ class UserBooking {
   String status; // "Pending", "Approved", "Rejected"
   final DateTime bookedAt;
 
-  UserBooking({
+   UserBooking({
     required this.id,
     required this.roomName,
     required this.roomId,
@@ -91,8 +91,9 @@ class UserBooking {
 
 // --- Booking Data Store ---
 class BookingDataStore {
-  // Available rooms for booking - ALL ROOMS AVAILABLE INITIALLY
+  // Available rooms for booking - MIXED AVAILABILITY
   static List<BookingRoom> availableRooms = [
+    // Room 1: Mostly available (3 free slots, 1 pending)
     BookingRoom(
       id: 'room_001',
       name: 'Lanchester Study Room',
@@ -100,8 +101,14 @@ class BookingDataStore {
       location: '2nd Floor, D1, Library',
       imageUrl: 'assets/images/study_room1.jpg',
       description: 'A quiet study room with individual desks and power outlets. Perfect for focused studying and research work.',
-      timeSlots: _createDefaultTimeSlots(),
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+        TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+        TimeSlot(time: '15-17', status: 'pending', startHour: 15, endHour: 17, bookedDate: DateTime.now()),
+      ],
     ),
+    // Room 2: Half available, half reserved
     BookingRoom(
       id: 'room_002',
       name: 'Multimedia Room 1',
@@ -109,8 +116,14 @@ class BookingDataStore {
       location: '1st Floor, C2, Multimedia Zone',
       imageUrl: 'assets/images/multimedia_1.jpg',
       description: 'Equipped with large screen displays, audio systems, and presentation tools. Ideal for group presentations and multimedia projects.',
-      timeSlots: _createDefaultTimeSlots(),
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'reserved', startHour: 8, endHour: 10, bookedDate: DateTime.now()),
+        TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'reserved', startHour: 13, endHour: 15, bookedDate: DateTime.now()),
+        TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
+      ],
     ),
+    // Room 3: All available (fresh room)
     BookingRoom(
       id: 'room_003',
       name: 'Study Room 2',
@@ -118,8 +131,14 @@ class BookingDataStore {
       location: 'Ground Floor, B1, Study Area',
       imageUrl: 'assets/images/study_room2.jpg',
       description: 'Small collaborative space with whiteboards and comfortable seating. Great for group discussions and team projects.',
-      timeSlots: _createDefaultTimeSlots(),
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+        TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+        TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
+      ],
     ),
+    // Room 4: Mostly reserved (1 free slot)
     BookingRoom(
       id: 'room_004',
       name: 'Lecture Hall 1',
@@ -127,8 +146,14 @@ class BookingDataStore {
       location: '3rd Floor, E1, Academic Wing',
       imageUrl: 'assets/images/lecture_hall1.jpg',
       description: 'Large capacity hall with projector and sound system. Suitable for workshops, seminars, and large group activities.',
-      timeSlots: _createDefaultTimeSlots(),
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'reserved', startHour: 8, endHour: 10, bookedDate: DateTime.now()),
+        TimeSlot(time: '10-12', status: 'reserved', startHour: 10, endHour: 12, bookedDate: DateTime.now()),
+        TimeSlot(time: '13-15', status: 'reserved', startHour: 13, endHour: 15, bookedDate: DateTime.now()),
+        TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
+      ],
     ),
+    // Room 5: Disabled room
     BookingRoom(
       id: 'room_005',
       name: 'Conference Room A',
@@ -136,26 +161,22 @@ class BookingDataStore {
       location: '4th Floor, F1, Admin Building',
       imageUrl: 'assets/images/study_room3.jpg',
       description: 'Professional meeting space with video conferencing capabilities and executive seating.',
-      timeSlots: _createDefaultTimeSlots(),
+      isDisabled: true,
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'disabled', startHour: 8, endHour: 10),
+        TimeSlot(time: '10-12', status: 'disabled', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'disabled', startHour: 13, endHour: 15),
+        TimeSlot(time: '15-17', status: 'disabled', startHour: 15, endHour: 17),
+      ],
     ),
   ];
 
-  // User's current bookings - EMPTY INITIALLY
+  // User's current bookings - EMPTY INITIALLY (student hasn't booked yet)
   static List<UserBooking> userBookings = [];
 
   // Current student info
   static const String currentStudentName = 'Riley Tan';
   static const String currentStudentId = 'STU12345';
-
-  // Helper method to create default time slots (all free)
-  static List<TimeSlot> _createDefaultTimeSlots() {
-    return [
-      TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
-      TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
-      TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
-      TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
-    ];
-  }
 
   // Check if student can book today
   static bool canStudentBookToday() {

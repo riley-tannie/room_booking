@@ -2,9 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:room_booking/lecturer/home_lecturer.dart';
 import './student/homepage.dart';
 import './staff/home_staff.dart';
+import './register.dart'; // Import the register.dart file
 
-class SignInScreen extends StatelessWidget {
+class SignInScreen extends StatefulWidget {
   const SignInScreen({Key? key}) : super(key: key);
+
+  @override
+  _SignInScreenState createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,40 +73,19 @@ class SignInScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // ID Field
-                  _buildTextField('ID Number', 'Enter your ID number'),
-                  const SizedBox(height: 16),
-                  
-                  // Name Field
-                  _buildTextField('Full Name', 'Enter your full name'),
-                  const SizedBox(height: 16),
-                  
-                  // Username Field
-                  _buildTextField('Username', 'Enter your username'),
+                  // Email Field
+                  _buildTextField(_emailController, 'Email', 'Enter your email'),
                   const SizedBox(height: 16),
                   
                   // Password Field
-                  _buildPasswordField('Password', '*********'),
-                  const SizedBox(height: 20),
-                  
-                  // Role Selection
-                  const Text(
-                    'Select Role',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E2A3A),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildRoleButtons(context),
+                  _buildPasswordField(_passwordController, 'Password', '*********'),
                   const SizedBox(height: 30),
                   
                   // Sign In Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => _goToHome(context, 'student'),
+                      onPressed: () => _signIn(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2C5473),
                         shape: RoundedRectangleBorder(
@@ -123,15 +118,10 @@ class SignInScreen extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Sign up feature coming soon!'),
-                              backgroundColor: const Color(0xFF2C5473),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          // Navigate to Register screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => RegisterScreen()),
                           );
                         },
                         child: const Text(
@@ -145,6 +135,9 @@ class SignInScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  // Demo Accounts Info
+                  _buildDemoAccountsInfo(),
                 ],
               ),
             ),
@@ -154,7 +147,7 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String hint) {
+  Widget _buildTextField(TextEditingController controller, String label, String hint) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -168,6 +161,7 @@ class SignInScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
@@ -186,7 +180,7 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPasswordField(String label, String hint) {
+  Widget _buildPasswordField(TextEditingController controller, String label, String hint) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -200,6 +194,7 @@ class SignInScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           obscureText: true,
           decoration: InputDecoration(
             hintText: hint,
@@ -219,58 +214,143 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRoleButtons(BuildContext context) {
+  Widget _buildDemoAccountsInfo() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFE8EDF1),
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildRoleButton('Student', 0, context),
-          _buildRoleButton('Staff', 1, context),
-          _buildRoleButton('Admin', 2, context),
+          const Text(
+            'Demo Accounts:',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2C5473),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildDemoAccountItem('Student', 'student@lamduan.mfu.ac.th', 'password123'),
+          _buildDemoAccountItem('Lecturer', 'lecturer@mfu.ac.th', 'password123'),
+          _buildDemoAccountItem('Staff', 'staff@mfu.th', 'password123'),
         ],
       ),
     );
   }
 
-  Widget _buildRoleButton(String role, int index, BuildContext context) {
-    // For demo purposes, we'll use a fixed selection. In real app, you'd manage state.
-    bool isSelected = index == 0; // Default to Student selected
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _goToHome(context, role.toLowerCase()),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF2C5473) : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+  Widget _buildDemoAccountItem(String role, String email, String password) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            '$role: ',
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            role,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+          Expanded(
+            child: Text(
+              '$email / $password',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[700],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  void _goToHome(BuildContext context, String role) {
-    if (role == 'student') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
-    } else if (role == 'staff') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeStaff()));
-    } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeLecturer()));
+  void _signIn(BuildContext context) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showErrorDialog(context, 'Please enter both email and password');
+      return;
     }
+
+    // Auto-detect role based on email domain
+    String role = _detectRoleFromEmail(email);
+    
+    if (role == 'unknown') {
+      _showErrorDialog(context, 'Invalid email domain. Please use:\n@lamduan.mfu.ac.th for Student\n@mfu.ac.th for Lecturer\n@mfu.th for Staff');
+      return;
+    }
+
+    // For demo purposes, accept any password
+    // In real app, you'd validate credentials with backend
+    _navigateToHome(context, role);
+  }
+
+  String _detectRoleFromEmail(String email) {
+    if (email.endsWith('@lamduan.mfu.ac.th')) {
+      return 'student';
+    } else if (email.endsWith('@mfu.ac.th')) {
+      return 'lecturer';
+    } else if (email.endsWith('@mfu.th')) {
+      return 'staff';
+    } else {
+      return 'unknown';
+    }
+  }
+
+  void _navigateToHome(BuildContext context, String role) {
+    switch (role) {
+      case 'student':
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (_) => HomeScreen())
+        );
+        break;
+      case 'staff':
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (_) => HomeStaff())
+        );
+        break;
+      case 'lecturer':
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(builder: (_) => HomeLecturer())
+        );
+        break;
+    }
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Sign In Error',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: Color(0xFF2C5473),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
