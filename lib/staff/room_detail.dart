@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'data_store.dart';
 
 class RoomDetailPage extends StatelessWidget {
+  final BookingRoom room;
+  final UserBooking? booking;
+
+  const RoomDetailPage({Key? key, required this.room, this.booking}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,11 +26,11 @@ class RoomDetailPage extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Align(
+                  Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Borrowed Detailed',
-                      style: TextStyle(
+                      booking != null ? 'Booking Details' : 'Room Details',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -61,7 +67,7 @@ class RoomDetailPage extends StatelessWidget {
                   
                   // Location
                   Text(
-                    '2nd Floor, D1, Library',
+                    room.location,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -70,80 +76,16 @@ class RoomDetailPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Booking Details Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Booking detail',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailRow('Room Name', 'Multimedia 1'),
-                        _buildDetailRow('Booking time', '08:00 am'),
-                        _buildDetailRow('Booking date', '12/1/2025'),
-                        _buildDetailRow('Booked by', 'Phuwin Tang'),
-                        _buildDetailRow('Approved by', 'Riley Tan'),
-                      ],
-                    ),
-                  ),
+                  // Time Slots Status
+                  _buildTimeSlotsCard(),
+                  const SizedBox(height: 20),
+                  
+                  if (booking != null) _buildBookingDetailsCard(),
                   
                   const SizedBox(height: 20),
                   
                   // Description Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Our multimedia room provides comfy beanbags and 18inches TV for relaxation and productivity of students. Students who carry student ID and lecturer could book for available time slots.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildDescriptionCard(),
                 ],
               ),
             ),
@@ -171,12 +113,12 @@ class RoomDetailPage extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: Image.asset(
-          'assets/images/multimedia_1.jpg', // Use the appropriate image for Multimedia 1
+          room.imageUrl,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Container(
               color: Colors.grey[200],
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
@@ -186,7 +128,7 @@ class RoomDetailPage extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Multimedia Room 1',
+                    room.name,
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 16,
@@ -197,6 +139,160 @@ class RoomDetailPage extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildTimeSlotsCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Today\'s Time Slots',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: room.timeSlots.map((slot) => _buildTimeSlotChip(slot)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeSlotChip(TimeSlot slot) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: slot.color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: slot.color),
+      ),
+      child: Column(
+        children: [
+          Text(
+            slot.time,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: slot.color,
+            ),
+          ),
+          Text(
+            slot.displayStatus,
+            style: TextStyle(
+              fontSize: 12,
+              color: slot.color,
+            ),
+          ),
+          if (slot.studentName != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              'by ${slot.studentName}',
+              style: TextStyle(
+                fontSize: 10,
+                color: slot.color,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingDetailsCard() {
+    if (booking == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Booking Details',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildDetailRow('Room Name', booking!.roomName),
+          _buildDetailRow('Time Slot', booking!.timeSlot),
+          _buildDetailRow('Booking Date', _formatDate(booking!.date)),
+          _buildDetailRow('Booked By', '${booking!.studentName} (${booking!.studentId})'),
+          _buildDetailRow('Status', booking!.status),
+          if (booking!.approvedBy != null)
+            _buildDetailRow('Approved By', booking!.approvedBy!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescriptionCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Description',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            room.description,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -229,5 +325,9 @@ class RoomDetailPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

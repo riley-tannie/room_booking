@@ -4,6 +4,7 @@ import 'home_staff.dart';
 import '../staff/booking_history.dart';
 import 'dashboard.dart';
 import 'profile.dart';
+import 'data_store.dart';
 
 class EditRoomTypesPage extends StatefulWidget {
   @override
@@ -14,17 +15,18 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
   int _selectedTab = 0;
   int _currentIndex = 1;
 
-  // Map room names to asset images
-  final Map<String, String> _roomImages = {
-    'Multimedia Room 5': 'assets/images/multimedia_3.jpg',
-    'Lecture Hall 2': 'assets/images/lecture_hall2.jpg',
-    'Lanchester Study Room': 'assets/images/study_room4.jpg',
-    'Lecture Hall 1': 'assets/images/lecture_hall2.jpg',
-    'Study Room 4': 'assets/images/study_room4.jpg',
-  };
+  // Form controllers for Add tab
+  final TextEditingController _roomNameController = TextEditingController();
+  final TextEditingController _roomLocationController = TextEditingController();
+  final TextEditingController _roomDescriptionController = TextEditingController();
 
-  // Default image if specific room image is not found
-  final String _defaultRoomImage = 'assets/images/study_room1.jpg';
+  @override
+  void dispose() {
+    _roomNameController.dispose();
+    _roomLocationController.dispose();
+    _roomDescriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,9 +277,9 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTextField('Room Name', 'Type your room name'),
-                _buildTextField('Booking status', 'Type your status'),
-                _buildTextField('Location', 'Type your location'),
+                _buildTextField(_roomNameController, 'Room Name', 'Type your room name'),
+                _buildTextField(_roomLocationController, 'Location', 'Type your location'),
+                _buildTextField(_roomDescriptionController, 'Description', 'Type room description'),
                 const SizedBox(height: 16),
                 Center(
                   child: ElevatedButton(
@@ -291,7 +293,7 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
                         vertical: 12,
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: _addNewRoom,
                     child: const Text(
                       'Add',
                       style: TextStyle(
@@ -311,36 +313,37 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
 
   // ---------- Edit / Disable ----------
   Widget _buildEditTab() {
+    final editableRooms = StaffDataStore.availableRooms.where((room) => !room.isDisabled).toList();
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
-        children: [
-          _buildEditableRoomCard('Multimedia Room 5', 'Available', 'Library'),
-          _buildEditableRoomCard('Lecture Hall 2', 'Disabled', 'C2'),
-          _buildEditableRoomCard('Lanchester Study Room', 'Pending', 'Library'),
-        ],
+        children: editableRooms
+            .map((room) => _buildEditableRoomCard(room))
+            .toList(),
       ),
     );
   }
 
   Widget _buildDisableTab() {
+    final disableRooms = StaffDataStore.availableRooms.where((room) => !room.isDisabled).toList();
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
-        children: [
-          _buildDisableRoomCard('Multimedia Room 5', 'Available', 'Library'),
-          _buildDisableRoomCard('Lecture Hall 1', 'Available', 'C4'),
-          _buildDisableRoomCard('Study Room 4', 'Pending', 'Library'),
-        ],
+        children: disableRooms
+            .map((room) => _buildDisableRoomCard(room))
+            .toList(),
       ),
     );
   }
 
   // ---------- Components ----------
-  Widget _buildTextField(String label, String hint) {
+  Widget _buildTextField(TextEditingController controller, String label, String hint) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
+        controller: controller,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -387,30 +390,34 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
     );
   }
 
-  Widget _buildEditableRoomCard(
-    String roomName,
-    String status,
-    String location,
-  ) {
-    return _buildRoomCard(roomName, status, location, true);
+  Widget _buildEditableRoomCard(BookingRoom room) {
+    return _buildRoomCard(room, true);
   }
 
-  Widget _buildDisableRoomCard(
-    String roomName,
-    String status,
-    String location,
-  ) {
-    return _buildRoomCard(roomName, status, location, false);
+  Widget _buildDisableRoomCard(BookingRoom room) {
+    return _buildRoomCard(room, false);
   }
 
-  Widget _buildRoomCard(
-    String roomName,
-    String status,
-    String location,
-    bool editable,
-  ) {
-    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
+  Widget _buildRoomCard(BookingRoom room, bool editable) {
+    // Count statuses
+    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final pendingSlots = room.timeSlots.where((slot) => slot.status == 'pending').length;
+    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved').length;
+    final disabledSlots = room.timeSlots.where((slot) => slot.status == 'disabled').length;
     
+    String statusText = '';
+    if (freeSlots == room.timeSlots.length) {
+      statusText = 'Available';
+    } else if (pendingSlots > 0) {
+      statusText = 'Pending';
+    } else if (reservedSlots > 0) {
+      statusText = 'Reserved';
+    } else if (disabledSlots == room.timeSlots.length) {
+      statusText = 'Disabled';
+    } else {
+      statusText = 'Mixed';
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -424,90 +431,217 @@ class _EditRoomTypesPageState extends State<EditRoomTypesPage> {
           ),
         ],
       ),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.asset(
-            imagePath,
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey[200],
-                child: const Icon(
-                  Icons.photo,
-                  color: Colors.grey,
-                  size: 24,
-                ),
-              );
-            },
-          ),
-        ),
-        title: Text(
-          roomName,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              status,
-              style: TextStyle(
-                color: _getStatusColor(status),
-                fontWeight: FontWeight.w600,
+            // Top row with image and basic info
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Room Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    room.imageUrl,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.photo,
+                          color: Colors.grey,
+                          size: 24,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        room.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        statusText,
+                        style: TextStyle(
+                          color: _getStatusColor(statusText),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              room.location,
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            // Slot status summary
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 72), // Align with text content
+              child: Text(
+                'Free: $freeSlots, Pending: $pendingSlots, Reserved: $reservedSlots, Disabled: $disabledSlots',
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.black54,
+                ),
               ),
             ),
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.black54),
-                Text(location, style: const TextStyle(color: Colors.black54)),
-              ],
+            
+            // Action button
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: editable
+                  ? TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => EditingDetailPage(room: room)),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF1FF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Edit details',
+                        style: TextStyle(
+                          color: Color(0xFF204C72),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: () {
+                        _disableRoom(room);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF6666),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: const Text(
+                        'Disable Room',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
-        trailing: editable
-            ? TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => EditingDetailPage()),
-                  );
-                },
-                child: const Text(
-                  'Edit details',
-                  style: TextStyle(
-                    color: Color(0xFF2C5473),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              )
-            : ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF6666),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Disable'),
-              ),
       ),
     );
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Available':
+    switch (status.toLowerCase()) {
+      case 'available':
         return Colors.green;
-      case 'Pending':
+      case 'pending':
         return Colors.orange;
-      case 'Disabled':
+      case 'reserved':
+        return Colors.blue;
+      case 'disabled':
         return Colors.red;
+      case 'mixed':
+        return Colors.purple;
       default:
         return Colors.black;
     }
+  }
+
+  void _addNewRoom() {
+    if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in room name and location')),
+      );
+      return;
+    }
+
+    final newRoom = BookingRoom(
+      id: 'room_${DateTime.now().millisecondsSinceEpoch}',
+      name: _roomNameController.text,
+      category: 'Study Room', // Default category
+      location: _roomLocationController.text,
+      imageUrl: 'assets/images/study_room1.jpg', // Default image
+      description: _roomDescriptionController.text.isEmpty 
+          ? 'Newly added room' 
+          : _roomDescriptionController.text,
+      timeSlots: _createDefaultTimeSlots(),
+    );
+
+    StaffDataStore.addRoom(newRoom);
+    
+    // Clear form
+    _roomNameController.clear();
+    _roomLocationController.clear();
+    _roomDescriptionController.clear();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Room added successfully')),
+    );
+  }
+
+  void _disableRoom(BookingRoom room) {
+    final success = StaffDataStore.disableRoom(room.id);
+    if (success) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Room disabled successfully')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot disable room with booked/pending slots')),
+      );
+    }
+  }
+
+  List<TimeSlot> _createDefaultTimeSlots() {
+    return [
+      TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+      TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+      TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+      TimeSlot(time: '15-17', status: 'free', startHour: 15, endHour: 17),
+    ];
   }
 }

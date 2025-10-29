@@ -3,6 +3,7 @@ import 'package:room_booking/staff/edit.dart';
 import 'home_staff.dart';
 import 'dashboard.dart';
 import 'room_detail.dart';
+import 'data_store.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -14,26 +15,10 @@ class BookingHistoryPage extends StatefulWidget {
 class _BookingHistoryPageState extends State<BookingHistoryPage> {
   int _currentIndex = 3; // History active
 
-  // Map room names to asset images
-  final Map<String, String> _roomImages = {
-    'Multimedia Room 1': 'assets/images/multimedia_1.jpg',
-    'Lecture Hall 3': 'assets/images/lecture_hall3.jpg',
-    'Study Room 4': 'assets/images/study_room4.jpg',
-    'Lecture Hall 7': 'assets/images/lecture_hall1.jpg',
-  };
-
-  // Default image if specific room image is not found
-  final String _defaultRoomImage = 'assets/images/study_room2.jpg';
-
-  final List<String> _roomNames = [
-    'Multimedia Room 1',
-    'Lecture Hall 3',
-    'Study Room 4',
-    'Lecture Hall 7',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final bookingHistory = StaffDataStore.allBookingsHistory;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
@@ -51,7 +36,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
               child: Align(
                 alignment: Alignment.center,
                 child: Text(
-                  'Your Booking History',
+                  'Booking History',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -66,15 +51,23 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
           // ---------- Content ----------
           Padding(
             padding: const EdgeInsets.only(top: 130, left: 20, right: 20),
-            child: SingleChildScrollView(
-              child: Column(
-                children: _roomNames
-                    .map(
-                      (roomName) => _buildHistoryItem(roomName),
-                    )
-                    .toList(),
-              ),
-            ),
+            child: bookingHistory.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No booking history available',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      children: bookingHistory
+                          .map((booking) => _buildHistoryItem(booking))
+                          .toList(),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -163,10 +156,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     );
   }
 
-  // ---------- card show room ----------
-  Widget _buildHistoryItem(String roomName) {
-    String imagePath = _roomImages[roomName] ?? _defaultRoomImage;
-    
+  // ---------- History Item Card ----------
+  Widget _buildHistoryItem(UserBooking booking) {
+    // Find the room to get image
+    final room = StaffDataStore.availableRooms.firstWhere(
+      (room) => room.id == booking.roomId,
+      orElse: () => StaffDataStore.availableRooms.first,
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
@@ -184,10 +181,11 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         padding: const EdgeInsets.all(14.0),
         child: Row(
           children: [
+            // Room Image
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                imagePath,
+                room.imageUrl,
                 width: 65,
                 height: 65,
                 fit: BoxFit.cover,
@@ -207,13 +205,61 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                roomName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black87,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    booking.roomName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${booking.timeSlot} • ${_formatDate(booking.date)}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'By: ${booking.studentName} (${booking.studentId})',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(booking.status),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      booking.status,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (booking.approvedBy != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Approved by: ${booking.approvedBy}',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Container(
@@ -223,9 +269,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
               ),
               child: TextButton(
                 onPressed: () {
+                  final room = StaffDataStore.availableRooms.firstWhere(
+                    (r) => r.id == booking.roomId,
+                    orElse: () => StaffDataStore.availableRooms.first,
+                  );
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => RoomDetailPage()),
+                    MaterialPageRoute(builder: (_) => RoomDetailPage(room: room, booking: booking)),
                   );
                 },
                 child: const Text(
@@ -241,5 +291,22 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }
