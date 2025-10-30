@@ -93,12 +93,12 @@ class UserBooking {
 class BookingDataStore {
   // Available rooms for booking - MIXED AVAILABILITY
   static List<BookingRoom> availableRooms = [
-    // Room 1: Mostly available (3 free slots, 1 pending)
+    // Room 1: Mostly available (3 free slots, 1 pending) - Changed to Study Room
     BookingRoom(
       id: 'room_001',
-      name: 'Lanchester Study Room',
-      category: 'Library',
-      location: '2nd Floor, D1, Library',
+      name: 'Study Room 1',
+      category: 'Study Room',
+      location: '2nd Floor, D1, Study Area',
       imageUrl: 'assets/images/study_room1.jpg',
       description: 'A quiet study room with individual desks and power outlets. Perfect for focused studying and research work.',
       timeSlots: [
@@ -169,54 +169,141 @@ class BookingDataStore {
         TimeSlot(time: '15-17', status: 'disabled', startHour: 15, endHour: 17),
       ],
     ),
+    // Room 6: Mixed availability - Mostly Pending
+    BookingRoom(
+      id: 'room_006',
+      name: 'Collaborative Space 1',
+      category: 'Study Room',
+      location: '1st Floor, A2, Learning Commons',
+      imageUrl: 'assets/images/collab_space1.jpg',
+      description: 'Modern collaborative area with movable furniture and multiple power outlets. Perfect for group work.',
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'pending', startHour: 8, endHour: 10, bookedDate: DateTime.now()),
+        TimeSlot(time: '10-12', status: 'pending', startHour: 10, endHour: 12, bookedDate: DateTime.now()),
+        TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+        TimeSlot(time: '15-17', status: 'pending', startHour: 15, endHour: 17, bookedDate: DateTime.now()),
+      ],
+    ),
+    // Room 7: Multimedia Room 2 - Mixed availability
+    BookingRoom(
+      id: 'room_007',
+      name: 'Multimedia Room 2',
+      category: 'Multimedia Room',
+      location: '1st Floor, C3, Multimedia Zone',
+      imageUrl: 'assets/images/multimedia_2.jpg',
+      description: 'Advanced multimedia room with 4K displays and surround sound system. Perfect for video presentations.',
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+        TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'pending', startHour: 13, endHour: 15, bookedDate: DateTime.now()),
+        TimeSlot(time: '15-17', status: 'reserved', startHour: 15, endHour: 17, bookedDate: DateTime.now()),
+      ],
+    ),
+    // Room 8: Lecture Hall 2 - Mostly available
+    BookingRoom(
+      id: 'room_008',
+      name: 'Lecture Hall 2',
+      category: 'Lecture Hall',
+      location: '3rd Floor, E2, Academic Wing',
+      imageUrl: 'assets/images/lecture_hall2.jpg',
+      description: 'Medium-sized lecture hall with comfortable seating and modern audio-visual equipment.',
+      timeSlots: [
+        TimeSlot(time: '8-10', status: 'free', startHour: 8, endHour: 10),
+        TimeSlot(time: '10-12', status: 'free', startHour: 10, endHour: 12),
+        TimeSlot(time: '13-15', status: 'free', startHour: 13, endHour: 15),
+        TimeSlot(time: '15-17', status: 'reserved', startHour: 15, endHour: 17, bookedDate: DateTime.now()),
+      ],
+    ),
   ];
 
-  // User's current bookings - EMPTY INITIALLY (student hasn't booked yet)
-  static List<UserBooking> userBookings = [];
+  // User's current bookings - WITH PAST BOOKINGS
+  static List<UserBooking> userBookings = [
+    // Today's booking
+    UserBooking(
+      id: 'booking_001',
+      roomName: 'Study Room 1',
+      roomId: 'room_001',
+      date: DateTime.now(),
+      timeSlot: '8-10',
+      studentName: currentStudentName,
+      studentId: currentStudentId,
+      status: 'Pending',
+      bookedAt: DateTime.now(),
+    ),
+    // Past approved booking (yesterday)
+    UserBooking(
+      id: 'booking_002',
+      roomName: 'Multimedia Room 1',
+      roomId: 'room_002',
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      timeSlot: '13-15',
+      studentName: currentStudentName,
+      studentId: currentStudentId,
+      status: 'Approved',
+      bookedAt: DateTime.now().subtract(const Duration(days: 1)),
+    ),
+    // Past rejected booking (2 days ago)
+    UserBooking(
+      id: 'booking_003',
+      roomName: 'Lecture Hall 1',
+      roomId: 'room_004',
+      date: DateTime.now().subtract(const Duration(days: 2)),
+      timeSlot: '10-12',
+      studentName: currentStudentName,
+      studentId: currentStudentId,
+      status: 'Rejected',
+      bookedAt: DateTime.now().subtract(const Duration(days: 2)),
+    ),
+    // Older approved booking (last week)
+    UserBooking(
+      id: 'booking_004',
+      roomName: 'Study Room 2',
+      roomId: 'room_003',
+      date: DateTime.now().subtract(const Duration(days: 7)),
+      timeSlot: '15-17',
+      studentName: currentStudentName,
+      studentId: currentStudentId,
+      status: 'Approved',
+      bookedAt: DateTime.now().subtract(const Duration(days: 7)),
+    ),
+  ];
 
   // Current student info
   static const String currentStudentName = 'Riley Tan';
   static const String currentStudentId = 'STU12345';
 
-  // Check if student can book today
+  // Check if student can book today - SIMPLIFIED LOGIC
   static bool canStudentBookToday() {
     final now = DateTime.now();
-    return !userBookings.any((booking) => 
+    final todayBookings = userBookings.where((booking) => 
         _isSameDay(booking.date, now) && 
-        booking.studentId == currentStudentId);
+        booking.studentId == currentStudentId).toList();
+    
+    // Allow booking if no bookings today OR if all today's bookings are rejected
+    return todayBookings.isEmpty || 
+           todayBookings.every((booking) => booking.status == 'Rejected');
   }
 
-  // Check if time slot is available for booking (not expired)
+  // SIMPLIFIED: Check if time slot is available (NO TIME EXPIRY)
   static bool isTimeSlotAvailable(TimeSlot slot) {
-    final now = DateTime.now();
-    
     // Check if slot is disabled
     if (slot.status == 'disabled') return false;
     
     // Check if slot is already booked
     if (slot.status != 'free') return false;
     
-    // Check if current time is past slot end time
-    final slotEndTime = DateTime(now.year, now.month, now.day, slot.endHour);
-    if (now.isAfter(slotEndTime)) {
-      return false;
-    }
-    
+    // NO TIME EXPIRY CHECK - users can book any time slot regardless of current time
     return true;
   }
 
-  // Get available time slots for a room (considering expiry)
+  // Get available time slots for a room (NO TIME EXPIRY)
   static List<TimeSlot> getAvailableTimeSlots(String roomId) {
     final room = availableRooms.firstWhere((room) => room.id == roomId);
     return room.timeSlots.where((slot) => isTimeSlotAvailable(slot)).toList();
   }
 
-  // Book a time slot
+  // Book a time slot - SIMPLIFIED LOGIC
   static void addBooking(UserBooking booking) {
-    if (!canStudentBookToday()) {
-      throw Exception('You can only book one slot per day');
-    }
-
     userBookings.add(booking);
     
     // Update room time slot status
@@ -288,6 +375,13 @@ class BookingDataStore {
   static List<BookingRoom> getRoomsByCategory(String category) {
     if (category == 'All') return availableRooms;
     return availableRooms.where((room) => room.category == category).toList();
+  }
+
+  // Get available rooms (with at least one available time slot)
+  static List<BookingRoom> getAvailableRooms() {
+    return availableRooms.where((room) => 
+        !room.isDisabled && 
+        room.timeSlots.any((slot) => isTimeSlotAvailable(slot))).toList();
   }
 
   // Helper method to check if two dates are the same day

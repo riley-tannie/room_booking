@@ -13,27 +13,14 @@ class _BookingState extends State<Booking> {
 
   final List<String> tabs = [
     "Available",
-    "Pending",
-    "Reserved",
+    "Pending", // Separate Pending tab
+    "Reserved", // Separate Reserved tab
     "Disabled",
   ];
 
   @override
   void initState() {
     super.initState();
-    // Reset rooms for new day if needed
-    _checkAndResetRooms();
-  }
-
-  void _checkAndResetRooms() {
-    final now = DateTime.now();
-    final lastReset = BookingDataStore.userBookings.isNotEmpty 
-        ? BookingDataStore.userBookings.first.bookedAt 
-        : now.subtract(const Duration(days: 1));
-    
-    if (!_isSameDay(lastReset, now)) {
-      BookingDataStore.resetRoomsForNextDay();
-    }
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
@@ -184,7 +171,7 @@ class _BookingState extends State<Booking> {
       case "Available":
         return "No available rooms at the moment";
       case "Pending":
-        return "No pending bookings";
+        return "No pending rooms";
       case "Reserved":
         return "No reserved rooms";
       case "Disabled":
@@ -195,31 +182,30 @@ class _BookingState extends State<Booking> {
   }
 
   List<BookingRoom> _getFilteredRooms() {
-    final now = DateTime.now();
-    
     switch (selectedTab) {
       case "Available":
         return BookingDataStore.availableRooms.where((room) {
           if (room.isDisabled) return false;
           final hasAvailableSlots = room.timeSlots.any((slot) => 
-              slot.status == 'free' && 
-              BookingDataStore.isTimeSlotAvailable(slot));
+              slot.status == 'free');
           return hasAvailableSlots && BookingDataStore.canStudentBookToday();
         }).toList();
       
       case "Pending":
+        // Show rooms that have pending slots
         return BookingDataStore.availableRooms.where((room) {
+          if (room.isDisabled) return false;
           final hasPendingSlots = room.timeSlots.any((slot) => 
-              slot.status == 'pending' && 
-              _isSameDay(slot.bookedDate ?? now, now));
+              slot.status == 'pending');
           return hasPendingSlots;
         }).toList();
       
       case "Reserved":
+        // Show rooms that have reserved slots
         return BookingDataStore.availableRooms.where((room) {
+          if (room.isDisabled) return false;
           final hasReservedSlots = room.timeSlots.any((slot) => 
-              slot.status == 'reserved' && 
-              _isSameDay(slot.bookedDate ?? now, now));
+              slot.status == 'reserved');
           return hasReservedSlots;
         }).toList();
       
@@ -260,8 +246,13 @@ class _BookingState extends State<Booking> {
 
   Widget _buildRoomCard(BuildContext context, BookingRoom room) {
     final availableSlots = room.timeSlots.where((slot) => 
-        slot.status == 'free' && 
-        BookingDataStore.isTimeSlotAvailable(slot)).length;
+        slot.status == 'free').length;
+    
+    final pendingSlots = room.timeSlots.where((slot) => 
+        slot.status == 'pending').length;
+    
+    final reservedSlots = room.timeSlots.where((slot) => 
+        slot.status == 'reserved').length;
     
     final isAvailable = availableSlots > 0 && 
                        !room.isDisabled && 
@@ -348,10 +339,43 @@ class _BookingState extends State<Booking> {
                   if (selectedTab == "Available" && !room.isDisabled) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '$availableSlots slot${availableSlots != 1 ? 's' : ''} available today',
+                      '$availableSlots available, $pendingSlots pending, $reservedSlots reserved',
                       style: TextStyle(
                         color: availableSlots > 0 ? Colors.green : Colors.red,
-                        fontSize: 12,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  if (selectedTab == "Pending" && !room.isDisabled) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$pendingSlots pending slot${pendingSlots != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  if (selectedTab == "Reserved" && !room.isDisabled) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$reservedSlots reserved slot${reservedSlots != 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  if (selectedTab == "Disabled") ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Room temporarily unavailable',
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -381,18 +405,18 @@ class _BookingState extends State<Booking> {
                 const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: isAvailable ? () {
-                    _navigateToTimeSlots(context, room);
+                    _showTimeSlotSelection(context, room);
                   } : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2C5473),
+                    backgroundColor: isAvailable ? const Color(0xFF2C5473) : Colors.grey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  child: const Text(
-                    'Book Now',
-                    style: TextStyle(
+                  child: Text(
+                    selectedTab == "Pending" || selectedTab == "Reserved" || selectedTab == "Disabled" ? 'View' : 'Book Now',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -410,246 +434,137 @@ class _BookingState extends State<Booking> {
   Color _getStatusColor(BookingRoom room) {
     if (room.isDisabled) return const Color(0xFFD64541);
     
-    final now = DateTime.now();
-    final hasPending = room.timeSlots.any((slot) => 
-        slot.status == 'pending' && _isSameDay(slot.bookedDate ?? now, now));
-    final hasReserved = room.timeSlots.any((slot) => 
-        slot.status == 'reserved' && _isSameDay(slot.bookedDate ?? now, now));
+    final availableSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final pendingSlots = room.timeSlots.where((slot) => slot.status == 'pending').length;
+    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved').length;
+    final totalSlots = room.timeSlots.length;
     
-    if (hasPending) return const Color(0xFFD4A017);
-    if (hasReserved) return const Color(0xFF428BCA);
+    // If most slots are pending, show as pending
+    if (pendingSlots > totalSlots / 2) return const Color(0xFFD4A017);
+    // If most slots are reserved, show as reserved
+    if (reservedSlots > totalSlots / 2) return const Color(0xFF428BCA);
+    // If has any pending slots, show as pending
+    if (pendingSlots > 0) return const Color(0xFFD4A017);
+    // If has any reserved slots, show as reserved
+    if (reservedSlots > 0) return const Color(0xFF428BCA);
     
-    final hasAvailable = room.timeSlots.any((slot) => 
-        slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot));
-    
-    return hasAvailable ? const Color(0xFF26A65B) : const Color(0xFFD64541);
+    return availableSlots > 0 ? const Color(0xFF26A65B) : const Color(0xFFD64541);
   }
 
   String _getStatusText(BookingRoom room) {
     if (room.isDisabled) return "Disabled";
     
-    final now = DateTime.now();
-    final hasPending = room.timeSlots.any((slot) => 
-        slot.status == 'pending' && _isSameDay(slot.bookedDate ?? now, now));
-    final hasReserved = room.timeSlots.any((slot) => 
-        slot.status == 'reserved' && _isSameDay(slot.bookedDate ?? now, now));
+    final availableSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final pendingSlots = room.timeSlots.where((slot) => slot.status == 'pending').length;
+    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved').length;
+    final totalSlots = room.timeSlots.length;
     
-    if (hasPending) return "Pending";
-    if (hasReserved) return "Reserved";
+    // If most slots are pending, show as pending
+    if (pendingSlots > totalSlots / 2) return "Mostly Pending";
+    // If most slots are reserved, show as reserved
+    if (reservedSlots > totalSlots / 2) return "Mostly Reserved";
+    // If has any pending slots, show as pending
+    if (pendingSlots > 0) return "Partially Pending";
+    // If has any reserved slots, show as reserved
+    if (reservedSlots > 0) return "Partially Reserved";
     
-    final hasAvailable = room.timeSlots.any((slot) => 
-        slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot));
-    
-    return hasAvailable ? "Available" : "Full";
+    return availableSlots > 0 ? "Available" : "Full";
   }
 
-  void _navigateToTimeSlots(BuildContext context, BookingRoom room) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TimeSlotSelectionPage(room: room),
-      ),
-    ).then((_) {
-      // Refresh the state when returning from time slot selection
-      setState(() {});
-    });
-  }
-}
+  void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
+    final availableSlots = BookingDataStore.getAvailableTimeSlots(room.id);
+    final allSlots = room.timeSlots;
 
-class TimeSlotSelectionPage extends StatefulWidget {
-  final BookingRoom room;
-
-  const TimeSlotSelectionPage({super.key, required this.room});
-
-  @override
-  State<TimeSlotSelectionPage> createState() => _TimeSlotSelectionPageState();
-}
-
-class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final availableSlots = BookingDataStore.getAvailableTimeSlots(widget.room.id);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFA),
-      body: Stack(
-        children: [
-          // Header
-          Container(
-            height: 150,
-            decoration: const BoxDecoration(
-              color: Color(0xFF2C5473),
-              borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(100),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2C5473),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
               ),
-            ),
-            child: SafeArea(
-              child: Stack(
-                alignment: Alignment.center,
+              child: Row(
                 children: [
-                  Align(
-                    alignment: Alignment.center,
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      widget.room.name,
+                      'Time Slots - ${room.name}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
                       ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 8,
-                    top: 4,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-
-          // Body
-          Padding(
-            padding: const EdgeInsets.only(top: 160),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
+            
+            // Room Info
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  // Room Image
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        widget.room.imageUrl,
-                        height: 180,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 180,
-                            color: const Color(0xFFE8EDF1),
-                            child: const Icon(
-                              Icons.photo,
-                              size: 50,
-                              color: Color(0xFF2C5473),
-                            ),
-                          );
-                        },
-                      ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      room.imageUrl,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 60,
+                          height: 60,
+                          color: const Color(0xFFE8EDF1),
+                          child: const Icon(
+                            Icons.photo,
+                            color: Color(0xFF2C5473),
+                            size: 24,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Location
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.black54, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.room.location,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Check if student already booked today
-                  if (!BookingDataStore.canStudentBookToday())
-                    _buildAlreadyBookedTodayWarning(),
-
-                  // Time Slots
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Available Time Slots for Today",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
                         Text(
-                          "Date: ${_formatDate(DateTime.now())}",
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        
-                        if (availableSlots.isEmpty)
-                          _buildNoSlotsAvailable()
-                        else
-                          ...availableSlots.map((slot) => _buildTimeSlotCard(slot, context)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Description
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12.withOpacity(0.05),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Description",
-                          style: TextStyle(
+                          room.name,
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         Text(
-                          widget.room.description,
+                          room.location,
                           style: TextStyle(
                             color: Colors.grey[600],
-                            height: 1.5,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -658,59 +573,51 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildAlreadyBookedTodayWarning() {
-    final todayBooking = BookingDataStore.getTodayBooking();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFEEBA)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning, color: Color(0xFF856404)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Already Booked Today",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF856404),
-                  ),
+            // Time Slots
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "All Time Slots",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Date: ${_formatDate(DateTime.now())}",
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    if (allSlots.isEmpty)
+                      _buildNoSlotsAvailable()
+                    else
+                      Expanded(
+                        child: ListView(
+                          children: allSlots.map((slot) => _buildTimeSlotCard(slot, context, room)).toList(),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  todayBooking != null
-                    ? "You can only book one slot per day. You already have ${todayBooking.roomName} booked for ${todayBooking.timeSlot}"
-                    : "You can only book one slot per day. You already have a booking for today.",
-                  style: const TextStyle(
-                    color: Color(0xFF856404),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNoSlotsAvailable() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(40),
       child: Column(
         children: [
           Icon(
@@ -720,30 +627,20 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            "No available time slots",
+            "No time slots available",
             style: TextStyle(
               color: Colors.grey,
               fontWeight: FontWeight.w500,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "All time slots for today are either booked or have expired",
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context) {
-    final now = DateTime.now();
-    final isExpired = !BookingDataStore.isTimeSlotAvailable(slot);
-
+  Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context, BookingRoom room) {
+    final isAvailable = slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot);
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -773,23 +670,23 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
         ),
         title: Text(
           slot.time,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: isExpired ? Colors.grey : Colors.black87,
+            color: Colors.black87,
           ),
         ),
         subtitle: Text(
-          isExpired ? 'Expired' : slot.displayStatus,
+          slot.displayStatus,
           style: TextStyle(
-            color: isExpired ? Colors.grey : slot.color,
+            color: slot.color,
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: !isExpired && BookingDataStore.canStudentBookToday()
+        trailing: isAvailable 
             ? ElevatedButton(
                 onPressed: () {
-                  _bookTimeSlot(context, slot);
+                  _bookTimeSlot(context, slot, room);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2C5473),
@@ -805,15 +702,15 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
                   ),
                 ),
               )
-            : null,
+            : Text(
+                slot.displayStatus,
+                style: TextStyle(
+                  color: slot.color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
-  }
-
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-           date1.month == date2.month &&
-           date1.day == date2.day;
   }
 
   String _formatDate(DateTime date) {
@@ -827,7 +724,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
       case 'pending':
         return Icons.pending;
       case 'reserved':
-        return Icons.block;
+        return Icons.event_available;
       case 'disabled':
         return Icons.block;
       default:
@@ -835,7 +732,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
     }
   }
 
-  void _bookTimeSlot(BuildContext context, TimeSlot slot) {
+  void _bookTimeSlot(BuildContext context, TimeSlot slot, BookingRoom room) {
     if (!BookingDataStore.canStudentBookToday()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -843,6 +740,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
           backgroundColor: Colors.red,
         ),
       );
+      Navigator.pop(context); // Close the bottom sheet
       return;
     }
 
@@ -854,7 +752,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Room: ${widget.room.name}'),
+            Text('Room: ${room.name}'),
             Text('Time: ${slot.time}'),
             Text('Date: ${_formatDate(DateTime.now())}'),
             const SizedBox(height: 8),
@@ -874,7 +772,7 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              _confirmBooking(context, slot);
+              _confirmBooking(context, slot, room);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2C5473),
@@ -886,13 +784,13 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
     );
   }
 
-  void _confirmBooking(BuildContext context, TimeSlot slot) {
+  void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) {
     try {
       // Create the booking
       final booking = UserBooking(
         id: 'booking_${DateTime.now().millisecondsSinceEpoch}',
-        roomName: widget.room.name,
-        roomId: widget.room.id,
+        roomName: room.name,
+        roomId: room.id,
         date: DateTime.now(),
         timeSlot: slot.time,
         studentName: BookingDataStore.currentStudentName,
@@ -904,18 +802,21 @@ class _TimeSlotSelectionPageState extends State<TimeSlotSelectionPage> {
       // Add booking to history and update room status
       BookingDataStore.addBooking(booking);
       
-      // Close dialog and go back to booking page
-      Navigator.pop(context); // Close dialog
-      Navigator.pop(context); // Go back to booking page
+      // Close all dialogs and bottom sheet
+      Navigator.pop(context); // Close confirmation dialog
+      Navigator.pop(context); // Close bottom sheet
       
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Successfully booked ${widget.room.name} for ${slot.time}. Status: Pending'),
+          content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
+
+      // Refresh the state
+      setState(() {});
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
