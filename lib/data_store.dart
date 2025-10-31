@@ -272,19 +272,7 @@ class BookingDataStore {
   static const String currentStudentName = 'Riley Tan';
   static const String currentStudentId = 'STU12345';
 
-  // Check if student can book today - SIMPLIFIED LOGIC
-  static bool canStudentBookToday() {
-    final now = DateTime.now();
-    final todayBookings = userBookings.where((booking) => 
-        _isSameDay(booking.date, now) && 
-        booking.studentId == currentStudentId).toList();
-    
-    // Allow booking if no bookings today OR if all today's bookings are rejected
-    return todayBookings.isEmpty || 
-           todayBookings.every((booking) => booking.status == 'Rejected');
-  }
-
-  // SIMPLIFIED: Check if time slot is available (NO TIME EXPIRY)
+  // SIMPLIFIED: Check if time slot is available (NO TIME EXPIRY, NO BOOKING LIMIT)
   static bool isTimeSlotAvailable(TimeSlot slot) {
     // Check if slot is disabled
     if (slot.status == 'disabled') return false;
@@ -293,16 +281,17 @@ class BookingDataStore {
     if (slot.status != 'free') return false;
     
     // NO TIME EXPIRY CHECK - users can book any time slot regardless of current time
+    // NO BOOKING LIMIT CHECK - users can book multiple slots per day
     return true;
   }
 
-  // Get available time slots for a room (NO TIME EXPIRY)
+  // Get available time slots for a room (NO TIME EXPIRY, NO BOOKING LIMIT)
   static List<TimeSlot> getAvailableTimeSlots(String roomId) {
     final room = availableRooms.firstWhere((room) => room.id == roomId);
     return room.timeSlots.where((slot) => isTimeSlotAvailable(slot)).toList();
   }
 
-  // Book a time slot - SIMPLIFIED LOGIC
+  // Book a time slot - NO BOOKING LIMIT
   static void addBooking(UserBooking booking) {
     userBookings.add(booking);
     

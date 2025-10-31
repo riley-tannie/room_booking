@@ -64,10 +64,6 @@ class _BookingState extends State<Booking> {
           ),
           const SizedBox(height: 24),
 
-          // Show message if student already booked today
-          if (!BookingDataStore.canStudentBookToday() && selectedTab == "Available")
-            _buildAlreadyBookedMessage(),
-
           // Room List
           if (filteredRooms.isEmpty)
             _buildEmptyState()
@@ -77,50 +73,6 @@ class _BookingState extends State<Booking> {
                 return _buildRoomCard(context, room);
               }).toList(),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAlreadyBookedMessage() {
-    final todayBooking = BookingDataStore.getTodayBooking();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3CD),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFEEBA)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info, color: Color(0xFF856404)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Already Booked Today",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF856404),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  todayBooking != null 
-                    ? "You have already booked ${todayBooking.roomName} for ${todayBooking.timeSlot}"
-                    : "You have already booked a room for today",
-                  style: const TextStyle(
-                    color: Color(0xFF856404),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -188,7 +140,7 @@ class _BookingState extends State<Booking> {
           if (room.isDisabled) return false;
           final hasAvailableSlots = room.timeSlots.any((slot) => 
               slot.status == 'free');
-          return hasAvailableSlots && BookingDataStore.canStudentBookToday();
+          return hasAvailableSlots; // REMOVED: && BookingDataStore.canStudentBookToday()
         }).toList();
       
       case "Pending":
@@ -255,8 +207,7 @@ class _BookingState extends State<Booking> {
         slot.status == 'reserved').length;
     
     final isAvailable = availableSlots > 0 && 
-                       !room.isDisabled && 
-                       BookingDataStore.canStudentBookToday();
+                       !room.isDisabled; // REMOVED: && BookingDataStore.canStudentBookToday()
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -733,17 +684,7 @@ class _BookingState extends State<Booking> {
   }
 
   void _bookTimeSlot(BuildContext context, TimeSlot slot, BookingRoom room) {
-    if (!BookingDataStore.canStudentBookToday()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can only book one slot per day'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      Navigator.pop(context); // Close the bottom sheet
-      return;
-    }
-
+    // REMOVED: Booking limit check
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -757,7 +698,7 @@ class _BookingState extends State<Booking> {
             Text('Date: ${_formatDate(DateTime.now())}'),
             const SizedBox(height: 8),
             const Text(
-              'Note: You can only book one slot per day',
+              'Note: Booking will be pending approval',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
