@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'room_list.dart';
 import 'request_status.dart';
 import 'booking_history.dart';
 import 'profile.dart';
+import '../signin.dart';
+import '../api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -11,12 +14,47 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  String? studentName;
 
   final List<Widget> _pages = [
     RoomList(), 
     RequestStatus(),
     BookingHistory(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+    _loadStudentName();
+  }
+
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('user');
+    
+    if (userString == null) {
+      // Redirect to login if not logged in
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => LoginScreen()),
+            (route) => false,
+          );
+        }
+      });
+    }
+  }
+
+  void _loadStudentName() async {
+    final user = await ApiService.getCurrentUser();
+    if (mounted) {
+      setState(() {
+        studentName = user?['fullName'];
+      });
+    }
+  }
 
   String _getAppBarTitle(int index) {
     switch (index) {
@@ -37,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
           Container(
             height: 150,
             decoration: const BoxDecoration(
@@ -52,14 +89,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Align(
                     alignment: Alignment.center,
-                    child: Text(
-                      _getAppBarTitle(_currentIndex),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getAppBarTitle(_currentIndex),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        if (studentName != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Welcome, $studentName!',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   Positioned(
@@ -83,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // ---------- Body ----------
           Padding(
             padding: const EdgeInsets.only(top: 160),
             child: _pages[_currentIndex],
@@ -91,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      // ---------- Floating Bottom Navigation ----------
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,

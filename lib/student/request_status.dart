@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../data_store.dart';
+import '../api_service.dart';
 import 'booking_detail_page.dart';
+import '../data_store.dart';
 
 class RequestStatus extends StatelessWidget {
   const RequestStatus({super.key});
@@ -10,68 +11,83 @@ class RequestStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final todayKey = DateTime(today.year, today.month, today.day);
-
-    // ✅ ดึงเฉพาะรายการของวันนี้
-    final todayBookings = BookingDataStore.userBookings
-        .where((b) =>
-            b.studentId == BookingDataStore.currentStudentId &&
-            DateTime(b.date.year, b.date.month, b.date.day) == todayKey)
-        .toList();
-
-    // ✅ แสดงเฉพาะ Pending + Rejected
-    final pendingBookings =
-        todayBookings.where((b) => b.status == 'Pending').toList();
-    final rejectedBookings =
-        todayBookings.where((b) => b.status == 'Rejected').toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (pendingBookings.isNotEmpty) ...[
-                const Text(
-                  'Pending Requests',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ...pendingBookings.map((b) => _buildRequestCard(b, context)),
-                const SizedBox(height: 24),
-              ],
-              if (rejectedBookings.isNotEmpty) ...[
-                const Text(
-                  'Rejected Requests',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ...rejectedBookings.map((b) => _buildRequestCard(b, context)),
-              ],
-              if (pendingBookings.isEmpty && rejectedBookings.isEmpty)
-                _buildEmptyState(),
-            ],
-          ),
-        ),
+      body: FutureBuilder(
+        future: _loadStudentRequests(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          final List<UserBooking> todayRequests = snapshot.data ?? [];
+          final pendingBookings = todayRequests.where((b) => b.status == 'Pending').toList();
+          final rejectedBookings = todayRequests.where((b) => b.status == 'Rejected').toList();
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (pendingBookings.isNotEmpty) ...[
+                    const Text(
+                      'Pending Requests - Today',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...pendingBookings.map((b) => _buildRequestCard(b, context)),
+                    const SizedBox(height: 24),
+                  ],
+                  if (rejectedBookings.isNotEmpty) ...[
+                    const Text(
+                      'Rejected Requests - Today',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...rejectedBookings.map((b) => _buildRequestCard(b, context)),
+                  ],
+                  if (pendingBookings.isEmpty && rejectedBookings.isEmpty)
+                    _buildEmptyState(),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
+  Future<List<UserBooking>> _loadStudentRequests() async {
+    final studentId = await ApiService.getCurrentStudentId();
+    if (studentId == null) return [];
+
+    final requestsData = await ApiService.getStudentRequests(studentId);
+    return requestsData.map((request) => UserBooking.fromJson(request)).toList();
+  }
+
   Widget _buildRequestCard(UserBooking booking, BuildContext context) {
-    final room = BookingDataStore.availableRooms.firstWhere(
-      (room) => room.id == booking.roomId,
-      orElse: () => BookingDataStore.availableRooms.first,
+    final room = BookingRoom(
+      id: booking.roomId,
+      name: booking.roomName,
+      category: 'Room',
+      location: booking.roomLocation,
+      imageUrl: booking.roomImageUrl,
+      description: 'Room description',
+      isDisabled: false,
+      timeSlots: [],
     );
 
     Color statusColor;
@@ -253,7 +269,7 @@ class RequestStatus extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "You have no pending or rejected requests today.",
+            "You have no pending or rejected requests for today.",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 14,

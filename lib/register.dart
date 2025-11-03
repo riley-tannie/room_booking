@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'signin.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -9,6 +12,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final String url = 'localhost:3000';
+  bool isWaiting = false;
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _idNumberController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -18,14 +23,112 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  @override
-  void dispose() {
-    _fullNameController.dispose();
-    _idNumberController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  void popDialog(String title, String message, {bool isSuccess = false}) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (isSuccess) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void register() async {
+    setState(() {
+      isWaiting = true;
+    });
+
+    final fullName = _fullNameController.text.trim();
+    final idNumber = _idNumberController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    // Validation
+    if (fullName.isEmpty) {
+      popDialog('Error', 'Please enter your full name');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    if (idNumber.isEmpty) {
+      popDialog('Error', 'Please enter your ID number');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    if (email.isEmpty) {
+      popDialog('Error', 'Please enter your email');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    if (password.isEmpty) {
+      popDialog('Error', 'Please enter a password');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    if (password != confirmPassword) {
+      popDialog('Error', 'Passwords do not match');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    if (password.length < 6) {
+      popDialog('Error', 'Password must be at least 6 characters long');
+      setState(() => isWaiting = false);
+      return;
+    }
+
+    try {
+      final Uri uri = Uri.http(url, '/api/register');
+      final Map userData = {
+        'fullName': fullName,
+        'idNumber': idNumber,
+        'email': email,
+        'password': password,
+      };
+
+      final http.Response response = await http
+          .post(
+            uri,
+            body: jsonEncode(userData),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        popDialog('Success', 'Registration successful! You can now sign in.', isSuccess: true);
+      } else {
+        popDialog('Error', response.body);
+      }
+    } on TimeoutException {
+      popDialog('Error', 'Timeout error, try again!');
+    } catch (e) {
+      popDialog('Error', 'Unknown error, try again!');
+    } finally {
+      setState(() {
+        isWaiting = false;
+      });
+    }
   }
 
   @override
@@ -34,10 +137,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
           Container(
             height: 180,
-            width: 1000,
+            width: double.infinity,
             decoration: const BoxDecoration(
               color: Color(0xFF2C5473),
               borderRadius: BorderRadius.only(
@@ -47,7 +149,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: SafeArea(
               child: Stack(
                 children: [
-                  // Back Button
                   Positioned(
                     left: 8,
                     top: 4,
@@ -58,7 +159,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       },
                     ),
                   ),
-                  // Title
                   const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -69,7 +169,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: Colors.white,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
                           ),
                         ),
                         SizedBox(height: 8),
@@ -88,34 +187,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
 
-          // ---------- Body ----------
           Padding(
             padding: const EdgeInsets.only(top: 200),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // Full Name Field
                   _buildTextField(_fullNameController, 'Full Name', 'Enter your full name'),
                   const SizedBox(height: 16),
-                  
-                  // ID Number Field
                   _buildTextField(_idNumberController, 'ID Number', 'Enter your ID number'),
                   const SizedBox(height: 16),
-                  
-                  // Email Field
                   _buildTextField(_emailController, 'Email', 'Enter your email'),
                   const SizedBox(height: 16),
-                  
-                  // Password Field
                   _buildPasswordField(_passwordController, 'Password', 'Enter password', _isPasswordVisible, () {
                     setState(() {
                       _isPasswordVisible = !_isPasswordVisible;
                     });
                   }),
                   const SizedBox(height: 16),
-                  
-                  // Confirm Password Field
                   _buildPasswordField(_confirmPasswordController, 'Confirm Password', 'Confirm your password', _isConfirmPasswordVisible, () {
                     setState(() {
                       _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
@@ -123,46 +212,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   }),
                   const SizedBox(height: 30),
                   
-                  // Register Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => _register(context),
+                      onPressed: isWaiting ? null : register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2C5473),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
                       ),
-                      child: const Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: isWaiting 
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Create Account',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
+                  
                   const SizedBox(height: 20),
-
-                  // Sign In Link
+                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        "Already have an account? ",
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      const Text("Already have an account? "),
                       GestureDetector(
                         onTap: () {
                           Navigator.pushReplacement(
                             context,
-                            MaterialPageRoute(builder: (_) => SignInScreen()),
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
                           );
                         },
                         child: const Text(
@@ -175,9 +256,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
+                  
                   const SizedBox(height: 20),
-
-                  // Email Domain Info
                   _buildEmailDomainInfo(),
                 ],
               ),
@@ -205,16 +285,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           controller: controller,
           decoration: InputDecoration(
             hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
         ),
       ],
@@ -245,16 +317,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           obscureText: !isVisible,
           decoration: InputDecoration(
             hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             suffixIcon: IconButton(
               icon: Icon(
                 isVisible ? Icons.visibility : Icons.visibility_off,
@@ -275,225 +339,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
         color: const Color(0xFFE8EDF1),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Email Domain Requirements:',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Color(0xFF2C5473),
             ),
           ),
-          const SizedBox(height: 8),
-          _buildDomainItem('Student', '@lamduan.mfu.ac.th'),
-          _buildDomainItem('Lecturer', '@mfu.ac.th'),
-          _buildDomainItem('Staff', '@mfu.th'),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text('• Student: @lamduan.mfu.ac.th'),
+          Text('• Lecturer: @mfu.ac.th'),
+          Text('• Staff: @mfu.th'),
+          SizedBox(height: 8),
+          Text(
             'Your role will be automatically detected based on your email domain.',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDomainItem(String role, String domain) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Text(
-            '$role: ',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          Text(
-            domain,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _register(BuildContext context) {
-    final fullName = _fullNameController.text.trim();
-    final idNumber = _idNumberController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
-
-    // Validation
-    if (fullName.isEmpty) {
-      _showErrorDialog(context, 'Please enter your full name');
-      return;
-    }
-
-    if (idNumber.isEmpty) {
-      _showErrorDialog(context, 'Please enter your ID number');
-      return;
-    }
-
-    if (email.isEmpty) {
-      _showErrorDialog(context, 'Please enter your email');
-      return;
-    }
-
-    if (password.isEmpty) {
-      _showErrorDialog(context, 'Please enter a password');
-      return;
-    }
-
-    if (confirmPassword.isEmpty) {
-      _showErrorDialog(context, 'Please confirm your password');
-      return;
-    }
-
-    if (password != confirmPassword) {
-      _showErrorDialog(context, 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      _showErrorDialog(context, 'Password must be at least 6 characters long');
-      return;
-    }
-
-    // Validate email domain
-    final String role = _detectRoleFromEmail(email);
-    if (role == 'unknown') {
-      _showErrorDialog(context, 
-        'Invalid email domain. Please use one of the following:\n\n'
-        '• @lamduan.mfu.ac.th for Student\n'
-        '• @mfu.ac.th for Lecturer\n'
-        '• @mfu.th for Staff'
-      );
-      return;
-    }
-
-    // Registration successful
-    _showSuccessDialog(context, fullName, email, role);
-  }
-
-  String _detectRoleFromEmail(String email) {
-    if (email.endsWith('@lamduan.mfu.ac.th')) {
-      return 'student';
-    } else if (email.endsWith('@mfu.ac.th')) {
-      return 'lecturer';
-    } else if (email.endsWith('@mfu.th')) {
-      return 'staff';
-    } else {
-      return 'unknown';
-    }
-  }
-
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Registration Error',
-            style: TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                'OK',
-                style: TextStyle(
-                  color: Color(0xFF2C5473),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showSuccessDialog(BuildContext context, String fullName, String email, String role) {
-    String roleDisplay = '';
-    switch (role) {
-      case 'student':
-        roleDisplay = 'Student';
-        break;
-      case 'lecturer':
-        roleDisplay = 'Lecturer';
-        break;
-      case 'staff':
-        roleDisplay = 'Staff';
-        break;
-    }
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'Registration Successful!',
-            style: TextStyle(
-              color: Colors.green,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Welcome, $fullName!'),
-              const SizedBox(height: 8),
-              Text('Email: $email'),
-              Text('Role: $roleDisplay'),
-              const SizedBox(height: 12),
-              const Text(
-                'Your account has been created successfully. You can now sign in.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => SignInScreen()),
-                );
-              },
-              child: const Text(
-                'Sign In Now',
-                style: TextStyle(
-                  color: Color(0xFF2C5473),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

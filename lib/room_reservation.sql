@@ -64,7 +64,13 @@ INSERT INTO `rooms` (`id`, `name`, `category`, `location`, `description`, `image
 ('room_001', 'Study Room 1', 'Study Room', '2nd Floor, D1, Study Area', 'A quiet study room with individual desks and power outlets', 'assets/images/study_room1.jpg', 0, '2025-11-01 14:32:10'),
 ('room_002', 'Multimedia Room 1', 'Multimedia Room', '1st Floor, C2, Multimedia Zone', 'Equipped with large screen displays and audio systems', 'assets/images/multimedia_1.jpg', 0, '2025-11-01 14:32:10'),
 ('room_003', 'Lecture Hall 1', 'Lecture Hall', '3rd Floor, E1, Academic Wing', 'Large capacity hall with projector and sound system', 'assets/images/lecture_hall1.jpg', 0, '2025-11-01 14:32:10'),
-('room_004', 'Study Room 2', 'Study Room', 'Ground Floor, B1, Study Area', 'Small collaborative space with whiteboards', 'assets/images/study_room2.jpg', 0, '2025-11-01 14:32:10');
+('room_004', 'Study Room 2', 'Study Room', 'Ground Floor, B1, Study Area', 'Small collaborative space with whiteboards', 'assets/images/study_room2.jpg', 0, '2025-11-01 14:32:10'),
+('room_005', 'Study Room 3', 'Study Room', '3rd Floor, E2, Study Area', 'Quiet study room with natural lighting', 'assets/images/study_room3.jpg', 0, '2025-11-01 14:32:10'),
+('room_006', 'Multimedia Room 2', 'Multimedia Room', '2nd Floor, D2, Multimedia Zone', 'Advanced multimedia room with 4K displays', 'assets/images/multimedia_2.jpg', 0, '2025-11-01 14:32:10'),
+('room_007', 'Lecture Hall 2', 'Lecture Hall', '4th Floor, F1, Academic Wing', 'Medium capacity hall with advanced audio system', 'assets/images/lecture_hall2.jpg', 0, '2025-11-01 14:32:10'),
+('room_008', 'Study Room 4', 'Study Room', '1st Floor, A1, Study Area', 'Group study room with large table', 'assets/images/study_room4.jpg', 0, '2025-11-01 14:32:10'),
+('room_009', 'Multimedia Room 3', 'Multimedia Room', '3rd Floor, E3, Multimedia Zone', 'Video conferencing enabled multimedia room', 'assets/images/multimedia_3.jpg', 0, '2025-11-01 14:32:10'),
+('room_010', 'Lecture Hall 3', 'Lecture Hall', '2nd Floor, C1, Academic Wing', 'Small lecture hall for seminars', 'assets/images/lecture_hall3.jpg', 0, '2025-11-01 14:32:10');
 
 -- --------------------------------------------------------
 
@@ -104,9 +110,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password`, `role`, `faculty`, `points`, `created_at`) VALUES
-('LEC10001', 'Dr. Smith', 'lecturer@mfu.ac.th', '$argon2id$v=19$m=19456,t=2,p=1$q0wW1d5n7P3r9s2x$RrQVctU1bQ2W3e4r5t6y7u8i9o0p', 'lecturer', 'Faculty of Engineering', 0, '2025-11-01 14:32:10'),
-('STAFF001', 'Admin Staff', 'staff@mfu.th', '$argon2id$v=19$m=19456,t=2,p=1$q0wW1d5n7P3r9s2x$RrQVctU1bQ2W3e4r5t6y7u8i9o0p', 'staff', 'Administration', 0, '2025-11-01 14:32:10'),
-('STU12345', 'Riley Tan', 'student@lamduan.mfu.ac.th', '$argon2id$v=19$m=19456,t=2,p=1$q0wW1d5n7P3r9s2x$RrQVctU1bQ2W3e4r5t6y7u8i9o0p', 'student', 'Faculty of Engineering', 320, '2025-11-01 14:32:10');
+('LEC10001', 'Dr. Smith', 'lecturer@mfu.ac.th', '111111', 'lecturer', 'Faculty of Engineering', 0, '2025-11-01 14:32:10'),
+('STAFF001', 'Admin Staff', 'staff@mfu.th', '123456', 'staff', 'Administration', 0, '2025-11-01 14:32:10'),
+('STU12345', 'Riley Tan', 'student@lamduan.mfu.ac.th', '123456', 'student', 'Faculty of Engineering', 320, '2025-11-01 14:32:10'),
+('6631501142', 'Riley Tang', '6631501142@lamduan.mfu.ac.th', '654321', 'student', 'Faculty of Engineering', 250, '2025-11-01 14:32:10');
 
 --
 -- Indexes for dumped tables
@@ -177,3 +184,76 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- Clear existing room availability data
+DELETE FROM room_availability;
+
+-- Insert sample room availability data with CORRECT time slots for TODAY
+INSERT INTO `room_availability` (`room_id`, `availability_date`, `time_slot`, `status`, `student_id`, `booking_id`) VALUES
+-- Room 001: Mixed statuses
+('room_001', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_001', CURDATE(), '10:00-12:00', 'pending', '6631501142', NULL),
+('room_001', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_001', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 002: More mixed statuses
+('room_002', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
+('room_002', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
+('room_002', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_002', CURDATE(), '15:00-17:00', 'pending', '6631501142', NULL),
+
+-- Room 003: Different pattern
+('room_003', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_003', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
+('room_003', CURDATE(), '13:00-15:00', 'reserved', '6631501142', NULL),
+('room_003', CURDATE(), '15:00-17:00', 'disabled', NULL, NULL),
+
+-- Room 004: Mostly available
+('room_004', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_004', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
+('room_004', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_004', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 005: All free
+('room_005', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_005', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
+('room_005', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_005', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 006: Morning busy
+('room_006', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
+('room_006', CURDATE(), '10:00-12:00', 'pending', '6631501142', NULL),
+('room_006', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_006', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 007: Afternoon free
+('room_007', CURDATE(), '08:00-10:00', 'disabled', NULL, NULL),
+('room_007', CURDATE(), '10:00-12:00', 'disabled', NULL, NULL),
+('room_007', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_007', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 008: Evening only
+('room_008', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
+('room_008', CURDATE(), '10:00-12:00', 'reserved', '6631501142', NULL),
+('room_008', CURDATE(), '13:00-15:00', 'pending', '6631501142', NULL),
+('room_008', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 009: All day available
+('room_009', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_009', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
+('room_009', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_009', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
+
+-- Room 010: Limited availability
+('room_010', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
+('room_010', CURDATE(), '10:00-12:00', 'disabled', NULL, NULL),
+('room_010', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
+('room_010', CURDATE(), '15:00-17:00', 'disabled', NULL, NULL);
+
+-- Add some sample bookings for the student
+INSERT INTO `bookings` (`id`, `student_id`, `room_id`, `booking_date`, `time_slot`, `status`, `booked_at`) VALUES
+('book_001', '6631501142', 'room_001', CURDATE(), '10:00-12:00', 'Pending', NOW()),
+('book_002', '6631501142', 'room_002', CURDATE(), '08:00-10:00', 'Approved', NOW()),
+('book_003', '6631501142', 'room_003', CURDATE(), '13:00-15:00', 'Approved', NOW()),
+('book_004', '6631501142', 'room_006', CURDATE(), '08:00-10:00', 'Approved', NOW()),
+('book_005', '6631501142', 'room_008', CURDATE(), '13:00-15:00', 'Pending', NOW());

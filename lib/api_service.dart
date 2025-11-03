@@ -116,4 +116,40 @@ class ApiService {
     }
     return null;
   }
-} 
+  // Add to api_service.dart
+static Future<String?> getCurrentStudentId() async {
+  final user = await getCurrentUser();
+  return user?['uid']?.toString();
+}
+
+static Future<String?> getCurrentStudentName() async {
+  final user = await getCurrentUser();
+  return user?['fullName']?.toString();
+}
+
+static Future<bool> hasStudentBookedToday(String studentId) async {
+  try {
+    final uri = Uri.http(url, '/api/bookings/student/$studentId/today');
+    final response = await http.get(uri);
+    
+    if (response.statusCode == 200) {
+      final bookings = jsonDecode(response.body);
+      return bookings.isNotEmpty;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+static Future<List<dynamic>> getStudentRequests(String studentId) async {
+  final uri = Uri.http(url, '/api/bookings/student/$studentId/today');
+  final response = await http.get(uri);
+  
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to load requests');
+  }
+}
+}

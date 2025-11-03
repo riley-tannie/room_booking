@@ -216,7 +216,7 @@ class ProfileLecturer extends StatelessWidget {
                         onPressed: () {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (_) => const SignInScreen()),
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
                             (route) => false,
                           );
                         },

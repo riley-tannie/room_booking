@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../api_service.dart';
 import '../data_store.dart';
 
 class Booking extends StatefulWidget {
@@ -10,27 +11,58 @@ class Booking extends StatefulWidget {
 
 class _BookingState extends State<Booking> {
   String selectedTab = "Available";
+  List<BookingRoom> availableRooms = [];
+  bool isLoading = true;
+  bool hasBookedToday = false;
+  String? currentStudentId;
 
   final List<String> tabs = [
     "Available",
-    "Pending", // Separate Pending tab
-    "Reserved", // Separate Reserved tab
+    "Pending",
+    "Reserved",
     "Disabled",
   ];
 
   @override
   void initState() {
     super.initState();
+    _loadData();
   }
 
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-           date1.month == date2.month &&
-           date1.day == date2.day;
+  Future<void> _loadData() async {
+    try {
+      currentStudentId = await ApiService.getCurrentStudentId();
+      
+      if (currentStudentId != null) {
+        hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
+        
+        final roomsData = await ApiService.getAvailableRooms();
+        
+        for (var roomData in roomsData) {
+          final room = BookingRoom.fromJson(roomData);
+          final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
+          room.timeSlots = timeSlotsData.map((slot) => TimeSlot.fromJson(slot)).toList();
+          availableRooms.add(room);
+        }
+      }
+      
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     // Filter rooms based on selected tab
     final filteredRooms = _getFilteredRooms();
 
@@ -136,16 +168,16 @@ class _BookingState extends State<Booking> {
   List<BookingRoom> _getFilteredRooms() {
     switch (selectedTab) {
       case "Available":
-        return BookingDataStore.availableRooms.where((room) {
+        return availableRooms.where((room) {
           if (room.isDisabled) return false;
           final hasAvailableSlots = room.timeSlots.any((slot) => 
               slot.status == 'free');
-          return hasAvailableSlots; // REMOVED: && BookingDataStore.canStudentBookToday()
+          return hasAvailableSlots && !hasBookedToday;
         }).toList();
       
       case "Pending":
         // Show rooms that have pending slots
-        return BookingDataStore.availableRooms.where((room) {
+        return availableRooms.where((room) {
           if (room.isDisabled) return false;
           final hasPendingSlots = room.timeSlots.any((slot) => 
               slot.status == 'pending');
@@ -154,7 +186,7 @@ class _BookingState extends State<Booking> {
       
       case "Reserved":
         // Show rooms that have reserved slots
-        return BookingDataStore.availableRooms.where((room) {
+        return availableRooms.where((room) {
           if (room.isDisabled) return false;
           final hasReservedSlots = room.timeSlots.any((slot) => 
               slot.status == 'reserved');
@@ -162,10 +194,10 @@ class _BookingState extends State<Booking> {
         }).toList();
       
       case "Disabled":
-        return BookingDataStore.availableRooms.where((room) => room.isDisabled).toList();
+        return availableRooms.where((room) => room.isDisabled).toList();
       
       default:
-        return BookingDataStore.availableRooms;
+        return availableRooms;
     }
   }
 
@@ -207,7 +239,8 @@ class _BookingState extends State<Booking> {
         slot.status == 'reserved').length;
     
     final isAvailable = availableSlots > 0 && 
-                       !room.isDisabled; // REMOVED: && BookingDataStore.canStudentBookToday()
+                       !room.isDisabled && 
+                       !hasBookedToday;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -322,9 +355,9 @@ class _BookingState extends State<Booking> {
                   ],
                   if (selectedTab == "Disabled") ...[
                     const SizedBox(height: 4),
-                    Text(
+                    const Text(
                       'Room temporarily unavailable',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.grey,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -423,7 +456,7 @@ class _BookingState extends State<Booking> {
   }
 
   void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
-    final availableSlots = BookingDataStore.getAvailableTimeSlots(room.id);
+    final availableSlots = room.timeSlots.where((slot) => slot.status == 'free').toList();
     final allSlots = room.timeSlots;
 
     showModalBottomSheet(
@@ -590,7 +623,7 @@ class _BookingState extends State<Booking> {
   }
 
   Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context, BookingRoom room) {
-    final isAvailable = slot.status == 'free' && BookingDataStore.isTimeSlotAvailable(slot);
+    final isAvailable = slot.status == 'free' && !hasBookedToday;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -684,7 +717,6 @@ class _BookingState extends State<Booking> {
   }
 
   void _bookTimeSlot(BuildContext context, TimeSlot slot, BookingRoom room) {
-    // REMOVED: Booking limit check
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -725,29 +757,24 @@ class _BookingState extends State<Booking> {
     );
   }
 
-  void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) {
+  void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
     try {
-      // Create the booking
-      final booking = UserBooking(
-        id: 'booking_${DateTime.now().millisecondsSinceEpoch}',
-        roomName: room.name,
-        roomId: room.id,
-        date: DateTime.now(),
-        timeSlot: slot.time,
-        studentName: BookingDataStore.currentStudentName,
-        studentId: BookingDataStore.currentStudentId,
-        status: 'Pending', 
-        bookedAt: DateTime.now(),
-      );
+      final studentId = await ApiService.getCurrentStudentId();
+      if (studentId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Student ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-      // Add booking to history and update room status
-      BookingDataStore.addBooking(booking);
+      await ApiService.createBooking(studentId, room.id, slot.time);
       
-      // Close all dialogs and bottom sheet
-      Navigator.pop(context); // Close confirmation dialog
-      Navigator.pop(context); // Close bottom sheet
+      Navigator.pop(context);
+      Navigator.pop(context);
       
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
@@ -756,8 +783,11 @@ class _BookingState extends State<Booking> {
         ),
       );
 
-      // Refresh the state
-      setState(() {});
+      setState(() {
+        hasBookedToday = true;
+      });
+      await _loadData();
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -13,155 +13,226 @@ class BookingDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Color statusColor;
+    String statusDescription;
+
+    switch (booking.status) {
+      case 'Approved':
+        statusColor = const Color(0xFF26A65B);
+        statusDescription = 'Your booking has been approved.';
+        break;
+      case 'Rejected':
+        statusColor = const Color(0xFFEF4444);
+        statusDescription = 'Your booking request has been rejected.';
+        break;
+      case 'Pending':
+      default:
+        statusColor = const Color(0xFFF59E0B);
+        statusDescription = 'Your booking is waiting for approval.';
+        break;
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFF2C5473),
-      body: Column(
-        children: [
-          const SizedBox(height: 50),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-                const Text(
-                  "Booking Details",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          // Room Image
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                room.imageUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: 200,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: const Color(0xFFE8EDF1),
-                    child: const Icon(
-                      Icons.photo,
-                      size: 50,
-                      color: Color(0xFF2C5473),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Location
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_on_outlined, color: Colors.white, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                room.location,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Details Card
-          Expanded(
-            child: Container(
+      backgroundColor: const Color(0xFFF5F8FF),
+      appBar: AppBar(
+        title: const Text('Booking Details'),
+        backgroundColor: const Color(0xFF2C5473),
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Room Card
+            Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        room.imageUrl,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 80,
+                            height: 80,
+                            color: const Color(0xFFE8EDF1),
+                            child: const Icon(
+                              Icons.photo,
+                              color: Color(0xFF2C5473),
+                              size: 30,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            room.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E2A3A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            room.category,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 16, color: Colors.black54),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  room.location,
+                                  style: const TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              padding: const EdgeInsets.all(24),
-              child: SingleChildScrollView(
+            ),
+
+            const SizedBox(height: 20),
+
+            // Booking Details Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status Badge
+                    const Text(
+                      'Booking Information',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E2A3A),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDetailRow('Date', _formatDate(booking.date)),
+                    _buildDetailRow('Time Slot', booking.timeSlot),
+                    _buildDetailRow('Booked At', _formatDateTime(booking.bookedAt)),
+                    _buildDetailRow('Student ID', booking.studentId),
+                    _buildDetailRow('Student Name', booking.studentName),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Status Card
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Booking Status',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E2A3A),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(booking.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _getStatusColor(booking.status),
-                        ),
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: statusColor),
                       ),
-                      child: Text(
-                        booking.status.toUpperCase(),
-                        style: TextStyle(
-                          color: _getStatusColor(booking.status),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      "Booking Details",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0E3C6E),
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildDetailRow("Room Name", room.name),
-                    _buildDetailRow("Booking Date", _formatDate(booking.date)),
-                    _buildDetailRow("Time Slot", booking.timeSlot),
-                    _buildDetailRow("Booked By", booking.studentName),
-                    _buildDetailRow("Student ID", booking.studentId),
-                    _buildDetailRow("Booking Status", booking.status),
-                    _buildDetailRow("Booked On", _formatDateTime(booking.bookedAt)),
-
-                    const SizedBox(height: 24),
-
-                    const Text(
-                      "Room Description",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0E3C6E),
-                        fontSize: 16,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            booking.status,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      room.description,
-                      style: const TextStyle(
-                        color: Color(0xFF1D2D50),
-                        height: 1.5,
+                      statusDescription,
+                      style: TextStyle(
+                        color: Colors.grey[600],
                         fontSize: 14,
                       ),
                     ),
@@ -169,53 +240,83 @@ class BookingDetailPage extends StatelessWidget {
                 ),
               ),
             ),
-          )
-        ],
+
+            const SizedBox(height: 20),
+
+            // Room Description
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Room Description',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E2A3A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      room.description,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String title, String value) {
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFF5A5A5A),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
               style: const TextStyle(
-                color: Color(0xFF0E3C6E),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+                color: Colors.black54,
               ),
-              textAlign: TextAlign.right,
             ),
           ),
         ],
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Approved':
-        return const Color(0xFF10B981);
-      case 'Pending':
-        return const Color(0xFFF59E0B);
-      case 'Rejected':
-        return const Color(0xFFEF4444);
-      default:
-        return const Color(0xFF6B7280);
-    }
   }
 
   String _formatDate(DateTime date) {
@@ -223,6 +324,6 @@ class BookingDetailPage extends StatelessWidget {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return "${_formatDate(dateTime)} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+    return "${_formatDate(dateTime)} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
   }
 }

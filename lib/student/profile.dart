@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/signin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../api_service.dart';
+import '../signin.dart';
 
 class Profile extends StatelessWidget {
   const Profile({super.key});
@@ -7,190 +9,268 @@ class Profile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F8FF),
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: const Text('Profile'),
         backgroundColor: const Color(0xFF2C5473),
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(context),
-            const SizedBox(height: 20),
-            _buildMenuItems(context),
-          ],
-        ),
+      body: FutureBuilder(
+        future: _loadUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final userData = snapshot.data ?? {};
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Profile Card
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2C5473),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          userData['name'] ?? 'Student',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E2A3A),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          userData['email'] ?? '',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2C5473),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            userData['role']?.toUpperCase() ?? 'STUDENT',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Information Card
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Student Information',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E2A3A),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoRow('Student ID', userData['id'] ?? ''),
+                        _buildInfoRow('Email', userData['email'] ?? ''),
+                        _buildInfoRow('Faculty', userData['faculty'] ?? 'Faculty of Engineering'),
+                        _buildInfoRow('Points', '${userData['points'] ?? '0'} points'),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Actions Card
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Actions',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E2A3A),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _logout(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.logout),
+                            label: const Text(
+                              'Logout',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context) {
-    return Card(
-      elevation: 6,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 45,
-              backgroundColor: const Color(0xFF2C5473).withOpacity(0.1),
-              child: const Icon(
-                Icons.person_pin,
-                size: 50,
-                color: Color(0xFF2C5473),
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Riley Tan',
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E2A3A),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Student | Faculty of Engineering',
-              style: TextStyle(
-                fontSize: 14,
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF26A65B).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '320 points',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF26A65B),
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuItems(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          _buildMenuItem(context, 'Personal Info', Icons.person_outline),
-          _buildMenuItem(context, 'Security & Settings', Icons.settings),
-          _buildMenuItem(context, 'Booking Support', Icons.support_agent),
-          _buildMenuItem(context, 'Privacy & Policy', Icons.privacy_tip_outlined),
-          
-          _buildMenuItem(context, 'Sign out', Icons.logout, isSignOut: true),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, String title, IconData icon, {bool isSignOut = false}) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          leading: Icon(
-            icon,
-            color: isSignOut ? const Color(0xFFD64541) : const Color(0xFF2C5473),
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              color: isSignOut ? const Color(0xFFD64541) : const Color(0xFF1E2A3A),
-              fontWeight: isSignOut ? FontWeight.bold : FontWeight.w500,
-            ),
-          ),
-          trailing: isSignOut
-              ? null
-              : const Icon(Icons.chevron_right, size: 20, color: Color(0xFF2C5473)),
-          onTap: () {
-            if (isSignOut) {
-              _handleSignOut(context);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Navigating to $title...'),
-                  backgroundColor: const Color(0xFF2C5473),
-                ),
-              );
-            }
-          },
-        ),
-        if (!isSignOut && title != 'Privacy & Policy')
-          const Divider(
-            height: 1,
-            indent: 20,
-            endIndent: 20,
-            color: Color(0xFFE8EDF1),
-          ),
-      ],
-    );
+  Future<Map<String, dynamic>> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'id': prefs.getString('user_id'),
+      'name': prefs.getString('user_name'),
+      'email': prefs.getString('user_email'),
+      'role': prefs.getString('user_role'),
+      'faculty': 'Faculty of Engineering', // You can store this in shared_preferences too
+      'points': '250',
+    };
   }
 
-  void _handleSignOut(BuildContext context) {
+  void _logout(BuildContext context) async {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'Confirm Sign Out',
-            style: TextStyle(
-              color: Color(0xFF1E2A3A),
-              fontWeight: FontWeight.bold,
-            ),
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          content: const Text('You will be logged out and returned to the sign-in screen.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Color(0xFF2C5473)),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
+          ElevatedButton(
+            onPressed: () async {
+              await ApiService.logout();
+              if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const SignInScreen()),
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
                   (route) => false,
                 );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD64541),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Sign Out'),
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
             ),
-          ],
-        );
-      },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
   }
 }
