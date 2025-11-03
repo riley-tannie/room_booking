@@ -5,21 +5,26 @@ import 'booking_detail_page.dart';
 class RequestStatus extends StatelessWidget {
   const RequestStatus({super.key});
 
-  static const Color successColor = Color(0xFF10B981); 
-  static const Color infoColor = Color(0xFF3B82F6); 
   static const Color warningColor = Color(0xFFF59E0B);
   static const Color errorColor = Color(0xFFEF4444);
 
   @override
   Widget build(BuildContext context) {
-    // Filter bookings for current user
-    final userBookings = BookingDataStore.userBookings
-        .where((booking) => booking.studentId == BookingDataStore.currentStudentId)
+    final today = DateTime.now();
+    final todayKey = DateTime(today.year, today.month, today.day);
+
+    // ✅ ดึงเฉพาะรายการของวันนี้
+    final todayBookings = BookingDataStore.userBookings
+        .where((b) =>
+            b.studentId == BookingDataStore.currentStudentId &&
+            DateTime(b.date.year, b.date.month, b.date.day) == todayKey)
         .toList();
 
-    final pendingBookings = userBookings.where((b) => b.status == 'Pending').toList();
-    final approvedBookings = userBookings.where((b) => b.status == 'Approved').toList();
-    final rejectedBookings = userBookings.where((b) => b.status == 'Rejected').toList();
+    // ✅ แสดงเฉพาะ Pending + Rejected
+    final pendingBookings =
+        todayBookings.where((b) => b.status == 'Pending').toList();
+    final rejectedBookings =
+        todayBookings.where((b) => b.status == 'Rejected').toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
@@ -29,25 +34,6 @@ class RequestStatus extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Request Status',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E3A8A),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Status Summary
-              _buildStatusSummary(
-                pending: pendingBookings.length,
-                approved: approvedBookings.length,
-                rejected: rejectedBookings.length,
-              ),
-              const SizedBox(height: 24),
-
-              // Pending Requests
               if (pendingBookings.isNotEmpty) ...[
                 const Text(
                   'Pending Requests',
@@ -58,30 +44,9 @@ class RequestStatus extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...pendingBookings.map((booking) => 
-                  _buildRequestCard(booking, context)
-                ).toList(),
+                ...pendingBookings.map((b) => _buildRequestCard(b, context)),
                 const SizedBox(height: 24),
               ],
-
-              // Approved Requests
-              if (approvedBookings.isNotEmpty) ...[
-                const Text(
-                  'Approved Requests',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E3A8A),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ...approvedBookings.map((booking) => 
-                  _buildRequestCard(booking, context)
-                ).toList(),
-                const SizedBox(height: 24),
-              ],
-
-              // Rejected Requests
               if (rejectedBookings.isNotEmpty) ...[
                 const Text(
                   'Rejected Requests',
@@ -92,13 +57,9 @@ class RequestStatus extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...rejectedBookings.map((booking) => 
-                  _buildRequestCard(booking, context)
-                ).toList(),
+                ...rejectedBookings.map((b) => _buildRequestCard(b, context)),
               ],
-
-              // Empty State
-              if (userBookings.isEmpty) 
+              if (pendingBookings.isEmpty && rejectedBookings.isEmpty)
                 _buildEmptyState(),
             ],
           ),
@@ -107,90 +68,18 @@ class RequestStatus extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusSummary({required int pending, required int approved, required int rejected}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatusItem(
-            count: pending,
-            label: 'Pending',
-            color: warningColor,
-          ),
-          _buildStatusItem(
-            count: approved,
-            label: 'Approved',
-            color: successColor,
-          ),
-          _buildStatusItem(
-            count: rejected,
-            label: 'Rejected',
-            color: errorColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusItem({required int count, required String label, required Color color}) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            count.toString(),
-            style: TextStyle(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.black54,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRequestCard(UserBooking booking, BuildContext context) {
-    final room = BookingDataStore.availableRooms
-        .firstWhere((room) => room.id == booking.roomId, orElse: () => BookingDataStore.availableRooms.first);
+    final room = BookingDataStore.availableRooms.firstWhere(
+      (room) => room.id == booking.roomId,
+      orElse: () => BookingDataStore.availableRooms.first,
+    );
 
     Color statusColor;
     String statusText;
-    String approvalText;
     Color approvalBgColor;
+    String approvalText;
 
     switch (booking.status) {
-      case 'Approved':
-        statusColor = successColor;
-        statusText = 'Approved';
-        approvalText = 'Reservation Approved';
-        approvalBgColor = const Color(0xFFC8FACC);
-        break;
       case 'Rejected':
         statusColor = errorColor;
         statusText = 'Rejected';
@@ -237,11 +126,7 @@ class RequestStatus extends StatelessWidget {
                         width: 80,
                         height: 80,
                         color: const Color(0xFFE8EDF1),
-                        child: const Icon(
-                          Icons.photo,
-                          color: Color(0xFF2C5473),
-                          size: 30,
-                        ),
+                        child: const Icon(Icons.photo, color: Color(0xFF2C5473)),
                       );
                     },
                   ),
@@ -292,9 +177,7 @@ class RequestStatus extends StatelessWidget {
                             child: Text(
                               room.location,
                               style: const TextStyle(
-                                fontSize: 12, 
-                                color: Colors.black54
-                              ),
+                                  fontSize: 12, color: Colors.black54),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -358,14 +241,10 @@ class RequestStatus extends StatelessWidget {
       padding: const EdgeInsets.all(40),
       child: Column(
         children: [
-          Icon(
-            Icons.event_note_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.event_note_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           const Text(
-            "No Booking Requests",
+            "No Booking Requests Today",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
@@ -374,7 +253,7 @@ class RequestStatus extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "You haven't made any booking requests yet",
+            "You have no pending or rejected requests today.",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 14,

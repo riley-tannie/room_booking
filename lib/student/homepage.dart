@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'room_list.dart';
-import 'booking.dart';
 import 'request_status.dart';
 import 'booking_history.dart';
 import 'profile.dart';
@@ -14,8 +13,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    RoomList(), // This should NOT have its own header
-    Booking(), 
+    RoomList(), 
     RequestStatus(),
     BookingHistory(),
   ];
@@ -25,10 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return 'Available Rooms';
       case 1:
-        return 'Booking';
-      case 2:
         return 'Request Status';
-      case 3:
+      case 2:
         return 'Booking History';
       default:
         return 'Room Reservation';
@@ -113,9 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             _buildNavItem(Icons.meeting_room, 'Rooms', 0),
-            _buildNavItem(Icons.book_online, 'Booking', 1),
-            _buildNavItem(Icons.pending_actions, 'Requests', 2),
-            _buildNavItem(Icons.history, 'History', 3),
+            _buildNavItem(Icons.pending_actions, 'Requests', 1),
+            _buildNavItem(Icons.history, 'History', 2),
           ],
         ),
       ),

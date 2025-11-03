@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import '../data_store.dart';
 import 'booking_detail_page.dart';
 
@@ -7,9 +7,11 @@ class BookingHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get ALL bookings for current user, sorted by date (newest first)
+
     final userBookings = BookingDataStore.userBookings
-        .where((booking) => booking.studentId == BookingDataStore.currentStudentId)
+        .where((booking) =>
+            booking.studentId == BookingDataStore.currentStudentId &&
+            booking.status == 'Approved')
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -152,21 +154,21 @@ class BookingHistory extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Add status badge
+                  // Status badge (Approved only)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(booking.status).withOpacity(0.1),
+                      color: const Color(0xFF26A65B).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: _getStatusColor(booking.status),
+                        color: const Color(0xFF26A65B),
                         width: 1,
                       ),
                     ),
-                    child: Text(
-                      booking.status,
+                    child: const Text(
+                      'Approved',
                       style: TextStyle(
-                        color: _getStatusColor(booking.status),
+                        color: Color(0xFF26A65B),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -221,7 +223,7 @@ class BookingHistory extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            "No Booking History",
+            "No Approved Bookings",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
@@ -230,7 +232,7 @@ class BookingHistory extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "Your bookings will appear here",
+            "Your approved bookings will appear here",
             style: TextStyle(
               color: Colors.grey,
               fontSize: 14,
@@ -240,19 +242,6 @@ class BookingHistory extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Approved':
-        return const Color(0xFF26A65B); // Green
-      case 'Pending':
-        return const Color(0xFFD4A017); // Orange/Yellow
-      case 'Rejected':
-        return const Color(0xFFD64541); // Red
-      default:
-        return const Color(0xFF6B7280); // Gray
-    }
   }
 
   String _getMonthName(int month) {
