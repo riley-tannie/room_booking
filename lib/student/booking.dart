@@ -30,32 +30,35 @@ class _BookingState extends State<Booking> {
   }
 
   Future<void> _loadData() async {
-    try {
-      currentStudentId = await ApiService.getCurrentStudentId();
+  try {
+    currentStudentId = await ApiService.getCurrentStudentId();
+    
+    if (currentStudentId != null) {
+      hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
       
-      if (currentStudentId != null) {
-        hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
-        
-        final roomsData = await ApiService.getAvailableRooms();
-        
-        for (var roomData in roomsData) {
-          final room = BookingRoom.fromJson(roomData);
-          final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
-          room.timeSlots = timeSlotsData.map((slot) => TimeSlot.fromJson(slot)).toList();
-          availableRooms.add(room);
-        }
+      final roomsData = await ApiService.getAvailableRooms();
+      
+      // Clear existing rooms
+      availableRooms.clear();
+      
+      for (var roomData in roomsData) {
+        final room = BookingRoom.fromJson(roomData);
+        final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
+        room.timeSlots = timeSlotsData.map((slot) => TimeSlot.fromJson(slot)).toList();
+        availableRooms.add(room);
       }
-      
-      setState(() {
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading data: $e');
-      setState(() {
-        isLoading = false;
-      });
     }
+    
+    setState(() {
+      isLoading = false;
+    });
+  } catch (e) {
+    print('Error loading data: $e');
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -758,43 +761,73 @@ class _BookingState extends State<Booking> {
   }
 
   void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
-    try {
-      final studentId = await ApiService.getCurrentStudentId();
-      if (studentId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Student ID not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      await ApiService.createBooking(studentId, room.id, slot.time);
-      
-      Navigator.pop(context);
-      Navigator.pop(context);
-      
+  try {
+    final studentId = await ApiService.getCurrentStudentId();
+    if (studentId == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      setState(() {
-        hasBookedToday = true;
-      });
-      await _loadData();
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Booking failed: $e'),
+        const SnackBar(
+          content: Text('Student ID not found'),
           backgroundColor: Colors.red,
         ),
       );
+      return;
     }
+
+    print('Booking: Student=$studentId, Room=${room.id}, Time=${slot.time}');
+
+    // Use named parameters as defined in your ApiService
+    await ApiService.createBooking(
+      studentId: studentId,
+      roomId: room.id, 
+      timeSlot: slot.time,
+    );
+    
+    if (!mounted) return;
+    Navigator.pop(context); // Close confirmation dialog
+    Navigator.pop(context); // Close time slot selection
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      hasBookedToday = true;
+    });
+    
+    // Reload data to reflect the new booking
+    await _loadData();
+
+  } catch (e) {
+    print('Booking error: $e');
+    if (!mounted) return;
+    
+    // More specific error messages
+    String errorMessage = 'Booking failed';
+    if (e.toString().contains('already booked') || e.toString().contains('one slot per day')) {
+      errorMessage = 'You can only book one slot per day';
+    } else if (e.toString().contains('not available') || e.toString().contains('Time slot not available')) {
+      errorMessage = 'This time slot is no longer available';
+    } else if (e.toString().contains('Server error') || e.toString().contains('Database error')) {
+      errorMessage = 'Server error. Please try again.';
+    } else {
+      errorMessage = e.toString();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
+}
 }

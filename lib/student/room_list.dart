@@ -882,52 +882,73 @@ class _RoomListState extends State<RoomList> {
   }
 
   void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
-    try {
-      final studentId = await ApiService.getCurrentStudentId();
-      if (studentId == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Student ID not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      await ApiService.createBooking(studentId, room.id, slot.time);
-      
-      if (!mounted) return;
-      Navigator.pop(context);
-      Navigator.pop(context);
-
+  try {
+    final studentId = await ApiService.getCurrentStudentId();
+    if (studentId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending Approval'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      if (!mounted) return;
-      setState(() {
-        hasBookedToday = true;
-      });
-      await _loadData();
-
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Booking failed: $e'),
+        const SnackBar(
+          content: Text('Student ID not found'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
         ),
       );
+      return;
     }
+
+    print('Attempting to book: Student=$studentId, Room=${room.id}, Time=${slot.time}');
+
+    // Remove the testBooking call - it doesn't exist in ApiService
+    // Just proceed with the actual booking
+    final result = await ApiService.createBooking(
+      studentId: studentId,
+      roomId: room.id,
+      timeSlot: slot.time,
+    );
+    
+    if (!mounted) return;
+    Navigator.pop(context); // Close confirmation dialog
+    Navigator.pop(context); // Close time slot selection
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending Approval'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    if (!mounted) return;
+    setState(() {
+      hasBookedToday = true;
+    });
+    await _loadData();
+
+  } catch (e) {
+    print('Booking error details: $e');
+    if (!mounted) return;
+    
+    String errorMessage = 'Booking failed';
+    if (e.toString().contains('already booked')) {
+      errorMessage = 'You have already booked a room for today';
+    } else if (e.toString().contains('not available')) {
+      errorMessage = 'This time slot is no longer available';
+    } else if (e.toString().contains('Database error')) {
+      errorMessage = 'Server error. Please try again.';
+    } else {
+      errorMessage = e.toString();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
+}
 
   String _formatDateWithWeekday(DateTime date) {
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

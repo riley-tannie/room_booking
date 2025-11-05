@@ -82,14 +82,19 @@ class BookingHistory extends StatelessWidget {
   }
 
   Future<List<UserBooking>> _loadStudentBookings() async {
-    final studentId = await ApiService.getCurrentStudentId();
-    if (studentId == null) return [];
+  final studentId = await ApiService.getCurrentStudentId();
+  if (studentId == null) return [];
 
+  try {
     final bookingsData = await ApiService.getStudentBookings(studentId);
     final allBookings = bookingsData.map((booking) => UserBooking.fromJson(booking)).toList();
     
     return allBookings..sort((a, b) => b.date.compareTo(a.date));
+  } catch (e) {
+    print('Error loading booking history: $e');
+    return [];
   }
+}
 
   Widget _buildBookingCard(BuildContext context, UserBooking booking) {
     final room = BookingRoom(

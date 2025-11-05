@@ -71,12 +71,18 @@ class RequestStatus extends StatelessWidget {
   }
 
   Future<List<UserBooking>> _loadStudentRequests() async {
-    final studentId = await ApiService.getCurrentStudentId();
-    if (studentId == null) return [];
+  final studentId = await ApiService.getCurrentStudentId();
+  if (studentId == null) return [];
 
-    final requestsData = await ApiService.getStudentRequests(studentId);
+  try {
+    // Change this line from getStudentRequests to getStudentTodayBookings
+    final requestsData = await ApiService.getStudentTodayBookings(studentId);
     return requestsData.map((request) => UserBooking.fromJson(request)).toList();
+  } catch (e) {
+    print('Error loading requests: $e');
+    return [];
   }
+}
 
   Widget _buildRequestCard(UserBooking booking, BuildContext context) {
     final room = BookingRoom(
