@@ -223,40 +223,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  _buildDemoAccounts(),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDemoAccounts() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8EDF1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Demo Accounts:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C5473),
-            ),
-          ),
-          SizedBox(height: 8),
-          Text('Student: student@lamduan.mfu.ac.th / 123456'),
-          Text('Lecturer: lecturer@mfu.ac.th / 111111'),
-          Text('Staff: staff@mfu.th / 123456'),
         ],
       ),
     );

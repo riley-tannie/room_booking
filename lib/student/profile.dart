@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api_service.dart';
@@ -61,7 +62,7 @@ class Profile extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          userData['name'] ?? 'Student',
+                          userData['fullName'] ?? 'Student',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -127,9 +128,11 @@ class Profile extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildInfoRow('Student ID', userData['id'] ?? ''),
+                        _buildInfoRow('Student ID', userData['uid'] ?? ''),
+                        _buildInfoRow('Full Name', userData['fullName'] ?? ''),
                         _buildInfoRow('Email', userData['email'] ?? ''),
-                        _buildInfoRow('Faculty', userData['faculty'] ?? 'Faculty of Engineering'),
+                        _buildInfoRow('Role', userData['role'] ?? ''),
+                        _buildInfoRow('Faculty', 'Faculty of Engineering'),
                         _buildInfoRow('Points', '${userData['points'] ?? '0'} points'),
                       ],
                     ),
@@ -138,57 +141,26 @@ class Profile extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Actions Card
-                Container(
+                // Logout Button
+                SizedBox(
                   width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _logout(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEF4444),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Actions',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E2A3A),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _logout(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFEF4444),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.logout),
-                            label: const Text(
-                              'Logout',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    ),
+                    icon: const Icon(Icons.logout),
+                    label: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -207,7 +179,7 @@ class Profile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 100,
             child: Text(
               label,
               style: const TextStyle(
@@ -231,15 +203,28 @@ class Profile extends StatelessWidget {
   }
 
   Future<Map<String, dynamic>> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'id': prefs.getString('user_id'),
-      'name': prefs.getString('user_name'),
-      'email': prefs.getString('user_email'),
-      'role': prefs.getString('user_role'),
-      'faculty': 'Faculty of Engineering', // You can store this in shared_preferences too
-      'points': '250',
-    };
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userString = prefs.getString('user');
+      
+      if (userString != null) {
+        final userData = jsonDecode(userString);
+        print('Loaded user data: $userData'); // For debugging
+        
+        return {
+          'uid': userData['uid']?.toString() ?? '',
+          'fullName': userData['fullName']?.toString() ?? '',
+          'email': userData['email']?.toString() ?? '',
+          'role': userData['role']?.toString() ?? 'student',
+          'points': '250', // Default value
+        };
+      }
+      
+      return {};
+    } catch (e) {
+      print('Error loading user data: $e');
+      return {};
+    }
   }
 
   void _logout(BuildContext context) async {
@@ -259,7 +244,7 @@ class Profile extends StatelessWidget {
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
                 );
               }

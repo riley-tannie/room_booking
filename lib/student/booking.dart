@@ -30,35 +30,35 @@ class _BookingState extends State<Booking> {
   }
 
   Future<void> _loadData() async {
-  try {
-    currentStudentId = await ApiService.getCurrentStudentId();
-    
-    if (currentStudentId != null) {
-      hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
+    try {
+      currentStudentId = await ApiService.getCurrentStudentId();
       
-      final roomsData = await ApiService.getAvailableRooms();
-      
-      // Clear existing rooms
-      availableRooms.clear();
-      
-      for (var roomData in roomsData) {
-        final room = BookingRoom.fromJson(roomData);
-        final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
-        room.timeSlots = timeSlotsData.map((slot) => TimeSlot.fromJson(slot)).toList();
-        availableRooms.add(room);
+      if (currentStudentId != null) {
+        hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
+        
+        final roomsData = await ApiService.getAvailableRooms();
+        
+        // Clear existing rooms
+        availableRooms.clear();
+        
+        for (var roomData in roomsData) {
+          final room = BookingRoom.fromJson(roomData);
+          final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
+          room.timeSlots = timeSlotsData.map((slot) => TimeSlot.fromJson(slot)).toList();
+          availableRooms.add(room);
+        }
       }
+      
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() {
+        isLoading = false;
+      });
     }
-    
-    setState(() {
-      isLoading = false;
-    });
-  } catch (e) {
-    print('Error loading data: $e');
-    setState(() {
-      isLoading = false;
-    });
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -459,7 +459,6 @@ class _BookingState extends State<Booking> {
   }
 
   void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
-    final availableSlots = room.timeSlots.where((slot) => slot.status == 'free').toList();
     final allSlots = room.timeSlots;
 
     showModalBottomSheet(
@@ -496,7 +495,7 @@ class _BookingState extends State<Booking> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Time Slots - ${room.name}',
+                      'All Time Slots - ${room.name}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -554,6 +553,9 @@ class _BookingState extends State<Booking> {
                             fontSize: 12,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        // Show room status summary
+                        _buildRoomStatusSummary(room),
                       ],
                     ),
                   ),
@@ -561,7 +563,7 @@ class _BookingState extends State<Booking> {
               ),
             ),
 
-            // Time Slots
+            // Time Slots Section
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -569,7 +571,7 @@ class _BookingState extends State<Booking> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "All Time Slots",
+                      "All Time Slots - Today",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -582,6 +584,10 @@ class _BookingState extends State<Booking> {
                         color: Colors.grey[600],
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    
+                    // Status Legend
+                    _buildStatusLegend(),
                     const SizedBox(height: 16),
                     
                     if (allSlots.isEmpty)
@@ -597,6 +603,91 @@ class _BookingState extends State<Booking> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Add this method to show status legend
+  Widget _buildStatusLegend() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildLegendItem(const Color(0xFF26A65B), 'Available'),
+          _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
+          _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
+          _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Add this method to show room status summary
+  Widget _buildRoomStatusSummary(BookingRoom room) {
+    final availableCount = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final pendingCount = room.timeSlots.where((slot) => slot.status == 'pending').length;
+    final reservedCount = room.timeSlots.where((slot) => slot.status == 'reserved').length;
+    final disabledCount = room.timeSlots.where((slot) => slot.status == 'disabled').length;
+    
+    return Wrap(
+      spacing: 8,
+      children: [
+        if (availableCount > 0)
+          _buildStatusChip('$availableCount Available', const Color(0xFF26A65B)),
+        if (pendingCount > 0)
+          _buildStatusChip('$pendingCount Pending', const Color(0xFFF59E0B)),
+        if (reservedCount > 0)
+          _buildStatusChip('$reservedCount Reserved', const Color(0xFFEF4444)),
+        if (disabledCount > 0)
+          _buildStatusChip('$disabledCount Disabled', const Color(0xFF6B7280)),
+      ],
+    );
+  }
+
+  Widget _buildStatusChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -689,11 +780,20 @@ class _BookingState extends State<Booking> {
                   ),
                 ),
               )
-            : Text(
-                slot.displayStatus,
-                style: TextStyle(
-                  color: slot.color,
-                  fontWeight: FontWeight.w600,
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: slot.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: slot.color),
+                ),
+                child: Text(
+                  slot.displayStatus,
+                  style: TextStyle(
+                    color: slot.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
       ),
@@ -761,73 +861,73 @@ class _BookingState extends State<Booking> {
   }
 
   void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
-  try {
-    final studentId = await ApiService.getCurrentStudentId();
-    if (studentId == null) {
+    try {
+      final studentId = await ApiService.getCurrentStudentId();
+      if (studentId == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      print('Booking: Student=$studentId, Room=${room.id}, Time=${slot.time}');
+
+      // Use named parameters as defined in your ApiService
+      await ApiService.createBooking(
+        studentId: studentId,
+        roomId: room.id, 
+        timeSlot: slot.time,
+      );
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close confirmation dialog
+      Navigator.pop(context); // Close time slot selection
+      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student ID not found'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
-      return;
+
+      if (!mounted) return;
+      setState(() {
+        hasBookedToday = true;
+      });
+      
+      // Reload data to reflect the new booking
+      await _loadData();
+
+    } catch (e) {
+      print('Booking error: $e');
+      if (!mounted) return;
+      
+      // More specific error messages
+      String errorMessage = 'Booking failed';
+      if (e.toString().contains('already booked') || e.toString().contains('one slot per day')) {
+        errorMessage = 'You can only book one slot per day';
+      } else if (e.toString().contains('not available') || e.toString().contains('Time slot not available')) {
+        errorMessage = 'This time slot is no longer available';
+      } else if (e.toString().contains('Server error') || e.toString().contains('Database error')) {
+        errorMessage = 'Server error. Please try again.';
+      } else {
+        errorMessage = e.toString();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     }
-
-    print('Booking: Student=$studentId, Room=${room.id}, Time=${slot.time}');
-
-    // Use named parameters as defined in your ApiService
-    await ApiService.createBooking(
-      studentId: studentId,
-      roomId: room.id, 
-      timeSlot: slot.time,
-    );
-    
-    if (!mounted) return;
-    Navigator.pop(context); // Close confirmation dialog
-    Navigator.pop(context); // Close time slot selection
-    
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-
-    if (!mounted) return;
-    setState(() {
-      hasBookedToday = true;
-    });
-    
-    // Reload data to reflect the new booking
-    await _loadData();
-
-  } catch (e) {
-    print('Booking error: $e');
-    if (!mounted) return;
-    
-    // More specific error messages
-    String errorMessage = 'Booking failed';
-    if (e.toString().contains('already booked') || e.toString().contains('one slot per day')) {
-      errorMessage = 'You can only book one slot per day';
-    } else if (e.toString().contains('not available') || e.toString().contains('Time slot not available')) {
-      errorMessage = 'This time slot is no longer available';
-    } else if (e.toString().contains('Server error') || e.toString().contains('Database error')) {
-      errorMessage = 'Server error. Please try again.';
-    } else {
-      errorMessage = e.toString();
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(errorMessage),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-      ),
-    );
   }
-}
 }
