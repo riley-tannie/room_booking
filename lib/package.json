@@ -6,6 +6,7 @@
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
     "accepts": "^2.0.0",
+    "argon2": "^0.44.0",
     "aws-ssl-profiles": "^1.1.2",
     "body-parser": "^2.2.0",
     "bytes": "^3.1.2",

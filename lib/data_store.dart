@@ -115,16 +115,34 @@ class UserBooking {
   });
 
   factory UserBooking.fromJson(Map<String, dynamic> json) {
+    // Parse the date and convert to local timezone
+    DateTime bookingDate;
+    try {
+      // Parse as UTC and convert to local time
+      bookingDate = DateTime.parse(json['booking_date'] ?? DateTime.now().toString()).toLocal();
+    } catch (e) {
+      // Fallback if parsing fails
+      bookingDate = DateTime.now().toLocal();
+    }
+
+    // Parse bookedAt with timezone handling
+    DateTime bookedAt;
+    try {
+      bookedAt = DateTime.parse(json['booked_at'] ?? json['created_at'] ?? DateTime.now().toString()).toLocal();
+    } catch (e) {
+      bookedAt = DateTime.now().toLocal();
+    }
+
     return UserBooking(
       id: json['id']?.toString() ?? json['booking_id']?.toString() ?? '',
       roomName: json['room_name'] ?? '',
       roomId: json['room_id'] ?? '',
-      date: DateTime.parse(json['booking_date'] ?? DateTime.now().toString()),
+      date: bookingDate,
       timeSlot: json['time_slot'] ?? '',
       studentName: json['student_name'] ?? json['user_name'] ?? '',
       studentId: json['student_id'] ?? json['user_id'] ?? '',
       status: json['status'] ?? 'pending',
-      bookedAt: DateTime.parse(json['booked_at'] ?? json['created_at'] ?? DateTime.now().toString()),
+      bookedAt: bookedAt,
       roomLocation: json['location'] ?? '',
       roomImageUrl: json['image_url'] ?? 'assets/images/default_room.jpg',
       approvedBy: json['approved_by'],

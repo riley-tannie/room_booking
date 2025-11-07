@@ -103,7 +103,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'fullName': fullName,
         'idNumber': idNumber,
         'email': email,
-        'password': password,
+        'password': password, // Password will be hashed on the server
       };
 
       final http.Response response = await http
@@ -112,18 +112,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             body: jsonEncode(userData),
             headers: {'Content-Type': 'application/json'},
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         popDialog('Success', 'Registration successful! You can now sign in.', isSuccess: true);
       } else {
-        popDialog('Error', response.body);
+        final errorResponse = jsonDecode(response.body);
+        popDialog('Error', errorResponse['error'] ?? 'Registration failed');
       }
     } on TimeoutException {
       popDialog('Error', 'Timeout error, try again!');
     } catch (e) {
-      popDialog('Error', 'Unknown error, try again!');
+      popDialog('Error', 'Registration failed. Please try again.');
     } finally {
       setState(() {
         isWaiting = false;
@@ -256,9 +257,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                  
-                  const SizedBox(height: 20),
-                  _buildEmailDomainInfo(),
                 ],
               ),
             ),
@@ -329,37 +327,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmailDomainInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8EDF1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Email Domain Requirements:',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF2C5473),
-            ),
-          ),
-          SizedBox(height: 8),
-          Text('• Student: @lamduan.mfu.ac.th'),
-          Text('• Lecturer: @mfu.ac.th'),
-          Text('• Staff: @mfu.th'),
-          SizedBox(height: 8),
-          Text(
-            'Your role will be automatically detected based on your email domain.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -110,16 +110,7 @@ class _RoomListState extends State<RoomList> {
   List<TimeSlot> _createTimeSlotsWithStatus(List<dynamic> timeSlotsData) {
     final List<TimeSlot> timeSlots = [];
     final now = DateTime.now();
-    final currentTime = now.hour * 60 + now.minute; // Convert to minutes for easier comparison
-
-    // Create a map of existing time slots from API for easy lookup
-    final Map<String, Map<String, dynamic>> existingSlots = {};
-    for (var slotData in timeSlotsData) {
-      final time = slotData['time_slot'] ?? slotData['time'];
-      if (time != null) {
-        existingSlots[time] = slotData;
-      }
-    }
+    final currentTime = now.hour * 60 + now.minute;
 
     // Define time slots with their start times in minutes
     final timeSlotConfig = [
@@ -132,23 +123,27 @@ class _RoomListState extends State<RoomList> {
     for (var slotConfig in timeSlotConfig) {
       final slotTime = slotConfig['time'] as String;
       final slotStart = slotConfig['start'] as int;
-      final slotData = existingSlots[slotTime];
+      
+      // Find matching slot from API data
+      final slotData = timeSlotsData.firstWhere(
+        (s) => s['time_slot'] == slotTime,
+        orElse: () => null,
+      );
       
       String status = 'free';
       String displayStatus = 'Available';
       Color color = const Color(0xFF26A65B);
 
-      if (slotData != null) {
-        status = slotData['status'] ?? 'free';
-      }
-
-      // Check if time slot has passed (current time > slot start time)
+      // Check if time slot has passed first
       if (currentTime >= slotStart) {
         status = 'disabled';
         displayStatus = 'Time Passed';
         color = const Color(0xFF6B7280);
-      } else {
-        // Set proper status based on API data
+      } 
+      // If we have slot data, use its status
+      else if (slotData != null) {
+        status = slotData['status'] ?? 'free';
+        
         switch (status) {
           case 'pending':
             displayStatus = 'Pending';
@@ -210,8 +205,14 @@ class _RoomListState extends State<RoomList> {
     }
 
     final filteredRooms = availableRooms.where((room) {
-      final matchesTab = selectedTab == "All" || 
-                         room.category.toLowerCase().contains(selectedTab.toLowerCase().replaceAll(' ', ''));
+      bool matchesTab;
+      if (selectedTab == "All") {
+        matchesTab = true;
+      } else {
+        // Exact category matching based on your database
+        matchesTab = room.category == selectedTab;
+      }
+      
       final matchesSearch = room.name.toLowerCase().contains(searchQuery.toLowerCase());
       
       return matchesTab && matchesSearch;
@@ -474,6 +475,8 @@ class _RoomListState extends State<RoomList> {
   Widget _buildRoomCard(BookingRoom room) {
     final availableSlots = room.timeSlots.where((slot) => 
         slot.status == 'free' && slot.displayStatus == 'Available').length;
+    
+    // Check if user has booked today OR if room has no available slots
     final canBook = !hasBookedToday && availableSlots > 0 && !room.isDisabled;
 
     return Container(
@@ -554,9 +557,11 @@ class _RoomListState extends State<RoomList> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$availableSlots of ${allTimeSlots.length} time slots available',
+                    hasBookedToday 
+                      ? 'Booking submitted - Pending approval'
+                      : '$availableSlots of ${allTimeSlots.length} time slots available',
                     style: TextStyle(
-                      color: canBook ? Colors.green : Colors.red,
+                      color: hasBookedToday ? Colors.orange : (canBook ? Colors.green : Colors.red),
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -565,24 +570,42 @@ class _RoomListState extends State<RoomList> {
               ),
             ),
             
-            ElevatedButton(
-              onPressed: canBook ? () => _showTimeSlotSelection(context, room) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canBook ? const Color(0xFF2C5473) : Colors.grey,
-                shape: RoundedRectangleBorder(
+            // Updated booking button with disabled state
+            if (hasBookedToday)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              ),
-              child: const Text(
-                'Book Now',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                child: const Text(
+                  'Booked',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            else
+              ElevatedButton(
+                onPressed: canBook ? () => _showTimeSlotSelection(context, room) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canBook ? const Color(0xFF2C5473) : Colors.grey,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: Text(
+                  availableSlots > 0 ? 'Book Now' : 'Full',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -590,8 +613,8 @@ class _RoomListState extends State<RoomList> {
   }
 
   void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
-    final availableSlots = room.timeSlots.where((slot) => 
-        slot.status == 'free' && slot.displayStatus == 'Available').toList();
+    // Show ALL time slots, not just available ones
+    final allSlots = room.timeSlots;
 
     showModalBottomSheet(
       context: context,
@@ -626,7 +649,7 @@ class _RoomListState extends State<RoomList> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Available Time Slots - ${room.name}',
+                      'All Time Slots - ${room.name}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -715,34 +738,90 @@ class _RoomListState extends State<RoomList> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: availableSlots.isEmpty
-                    ? _buildNoSlotsAvailable()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Select a Time Slot:",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1E2A3A),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: ListView(
-                              children: availableSlots
-                                  .map((slot) => _buildTimeSlotCard(slot, context, room))
-                                  .toList(),
-                            ),
-                          ),
-                        ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "All Time Slots:",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E2A3A),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "Date: ${_formatDateWithWeekday(DateTime.now())}",
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Status Legend
+                    _buildStatusLegend(),
+                    const SizedBox(height: 16),
+                    
+                    if (allSlots.isEmpty)
+                      _buildNoSlotsAvailable()
+                    else
+                      Expanded(
+                        child: ListView(
+                          children: allSlots
+                              .map((slot) => _buildTimeSlotCard(slot, context, room))
+                              .toList(),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusLegend() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildLegendItem(const Color(0xFF26A65B), 'Available'),
+          _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
+          _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
+          _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -754,7 +833,7 @@ class _RoomListState extends State<RoomList> {
           Icon(Icons.schedule, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 12),
           const Text(
-            "No available time slots",
+            "No time slots available",
             style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
@@ -769,6 +848,9 @@ class _RoomListState extends State<RoomList> {
   }
 
   Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context, BookingRoom room) {
+    // Only allow booking if slot is free AND user hasn't booked today
+    final canBook = slot.status == 'free' && !hasBookedToday;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -795,10 +877,10 @@ class _RoomListState extends State<RoomList> {
         ),
         title: Text(
           slot.time,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: canBook ? Colors.black87 : Colors.grey,
           ),
         ),
         subtitle: Text(
@@ -808,22 +890,39 @@ class _RoomListState extends State<RoomList> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: ElevatedButton(
-          onPressed: () => _bookTimeSlot(context, slot, room),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2C5473),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Book',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
+        trailing: canBook 
+            ? ElevatedButton(
+                onPressed: () => _bookTimeSlot(context, slot, room),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C5473),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Book',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: slot.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: slot.color),
+                ),
+                child: Text(
+                  slot.displayStatus,
+                  style: TextStyle(
+                    color: slot.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -833,7 +932,7 @@ class _RoomListState extends State<RoomList> {
       case 'free':
         return Icons.check_circle;
       case 'pending':
-        return Icons.pending;
+        return Icons.pending_actions;
       case 'reserved':
         return Icons.event_available;
       case 'disabled':
@@ -882,73 +981,88 @@ class _RoomListState extends State<RoomList> {
   }
 
   void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
-  try {
-    final studentId = await ApiService.getCurrentStudentId();
-    if (studentId == null) {
+    try {
+      final studentId = await ApiService.getCurrentStudentId();
+      if (studentId == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Student ID not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      print('Attempting to book: Student=$studentId, Room=${room.id}, Time=${slot.time}');
+
+      // Final validation - ensure slot is still available
+      if (slot.status != 'free') {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This time slot is no longer available'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Create the booking
+      final result = await ApiService.createBooking(
+        studentId: studentId,
+        roomId: room.id,
+        timeSlot: slot.time,
+      );
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close confirmation dialog
+      Navigator.pop(context); // Close time slot selection
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Student ID not found'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending Approval'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
-      return;
+
+      if (!mounted) return;
+      setState(() {
+        hasBookedToday = true;
+      });
+      await _loadData();
+
+    } catch (e) {
+      print('Booking error details: $e');
+      if (!mounted) return;
+      
+      String errorMessage = 'Booking failed';
+      if (e.toString().contains('already booked')) {
+        errorMessage = 'You have already booked a room for today';
+        setState(() {
+          hasBookedToday = true;
+        });
+      } else if (e.toString().contains('no longer available')) {
+        errorMessage = 'This time slot was just taken. Please try another slot.';
+        await _loadData(); // Refresh data to show current availability
+      } else if (e.toString().contains('Database error')) {
+        errorMessage = 'Server error. Please try again.';
+      } else {
+        errorMessage = e.toString();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
-
-    print('Attempting to book: Student=$studentId, Room=${room.id}, Time=${slot.time}');
-
-    // Remove the testBooking call - it doesn't exist in ApiService
-    // Just proceed with the actual booking
-    final result = await ApiService.createBooking(
-      studentId: studentId,
-      roomId: room.id,
-      timeSlot: slot.time,
-    );
-    
-    if (!mounted) return;
-    Navigator.pop(context); // Close confirmation dialog
-    Navigator.pop(context); // Close time slot selection
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending Approval'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-
-    if (!mounted) return;
-    setState(() {
-      hasBookedToday = true;
-    });
-    await _loadData();
-
-  } catch (e) {
-    print('Booking error details: $e');
-    if (!mounted) return;
-    
-    String errorMessage = 'Booking failed';
-    if (e.toString().contains('already booked')) {
-      errorMessage = 'You have already booked a room for today';
-    } else if (e.toString().contains('not available')) {
-      errorMessage = 'This time slot is no longer available';
-    } else if (e.toString().contains('Database error')) {
-      errorMessage = 'Server error. Please try again.';
-    } else {
-      errorMessage = e.toString();
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(errorMessage),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 5),
-      ),
-    );
   }
-}
 
   String _formatDateWithWeekday(DateTime date) {
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

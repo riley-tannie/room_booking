@@ -241,6 +241,7 @@ class _BookingState extends State<Booking> {
     final reservedSlots = room.timeSlots.where((slot) => 
         slot.status == 'reserved').length;
     
+    // Disable booking if user has booked today OR no available slots
     final isAvailable = availableSlots > 0 && 
                        !room.isDisabled && 
                        !hasBookedToday;
@@ -326,9 +327,11 @@ class _BookingState extends State<Booking> {
                   if (selectedTab == "Available" && !room.isDisabled) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '$availableSlots available, $pendingSlots pending, $reservedSlots reserved',
+                      hasBookedToday 
+                        ? 'Your booking is pending approval'
+                        : '$availableSlots available, $pendingSlots pending, $reservedSlots reserved',
                       style: TextStyle(
-                        color: availableSlots > 0 ? Colors.green : Colors.red,
+                        color: hasBookedToday ? Colors.orange : (availableSlots > 0 ? Colors.green : Colors.red),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -381,7 +384,7 @@ class _BookingState extends State<Booking> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    _getStatusText(room),
+                    hasBookedToday ? "Booked" : _getStatusText(room),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -390,26 +393,45 @@ class _BookingState extends State<Booking> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: isAvailable ? () {
-                    _showTimeSlotSelection(context, room);
-                  } : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isAvailable ? const Color(0xFF2C5473) : Colors.grey,
-                    shape: RoundedRectangleBorder(
+                if (hasBookedToday)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  child: Text(
-                    selectedTab == "Pending" || selectedTab == "Reserved" || selectedTab == "Disabled" ? 'View' : 'Book Now',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    child: const Text(
+                      'Booked',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: isAvailable ? () {
+                      _showTimeSlotSelection(context, room);
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isAvailable ? const Color(0xFF2C5473) : Colors.grey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: Text(
+                      selectedTab == "Pending" || selectedTab == "Reserved" || selectedTab == "Disabled" 
+                        ? 'View' 
+                        : (isAvailable ? 'Book Now' : 'Full'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],
@@ -717,7 +739,8 @@ class _BookingState extends State<Booking> {
   }
 
   Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context, BookingRoom room) {
-    final isAvailable = slot.status == 'free' && !hasBookedToday;
+    // Only allow booking if slot is free AND user hasn't booked today
+    final canBook = slot.status == 'free' && !hasBookedToday;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -748,10 +771,10 @@ class _BookingState extends State<Booking> {
         ),
         title: Text(
           slot.time,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: canBook ? Colors.black87 : Colors.grey,
           ),
         ),
         subtitle: Text(
@@ -761,7 +784,7 @@ class _BookingState extends State<Booking> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: isAvailable 
+        trailing: canBook 
             ? ElevatedButton(
                 onPressed: () {
                   _bookTimeSlot(context, slot, room);
@@ -809,7 +832,7 @@ class _BookingState extends State<Booking> {
       case 'free':
         return Icons.check_circle;
       case 'pending':
-        return Icons.pending;
+        return Icons.pending_actions;
       case 'reserved':
         return Icons.event_available;
       case 'disabled':

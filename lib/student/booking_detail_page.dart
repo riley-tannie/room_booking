@@ -163,6 +163,11 @@ class BookingDetailPage extends StatelessWidget {
                     _buildDetailRow('Booked At', _formatDateTime(booking.bookedAt)),
                     _buildDetailRow('Student ID', booking.studentId),
                     _buildDetailRow('Student Name', booking.studentName),
+                    
+                    // Show approval information if available
+                    if (booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
+                      _buildDetailRow('Approved By', booking.approvedBy!)
+                      
                   ],
                 ),
               ),
@@ -236,6 +241,22 @@ class BookingDetailPage extends StatelessWidget {
                         fontSize: 14,
                       ),
                     ),
+                    
+                    // Additional status information for approved/rejected bookings
+                    if (booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          booking.status == 'Approved' 
+                            ? 'Approved by ${booking.approvedBy} on ${_formatDateTime( booking.bookedAt)}'
+                            : 'Rejected by ${booking.approvedBy} on ${_formatDateTime(booking.bookedAt)}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
