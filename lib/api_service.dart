@@ -89,7 +89,7 @@ class ApiService {
     }
   }
   
-  // Get rooms
+  // Get all rooms
   static Future<List<dynamic>> getAvailableRooms() async {
     try {
       final response = await http.get(
@@ -109,6 +109,27 @@ class ApiService {
       rethrow;
     }
   }
+
+  // Get today's rooms for lecturer
+  static Future<List<dynamic>> getTodayRooms() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/rooms/lecturer'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      print('Get today rooms response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load today\'s rooms: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get today rooms error: $e');
+      rethrow;
+    }
+  }
   
   // Get time slots
   static Future<List<dynamic>> getRoomTimeSlots(String roomId) async {
@@ -118,9 +139,6 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 10));
       
-      print('Get time slots response status: ${response.statusCode}');
-      print('Get time slots for room: $roomId');
-      
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -128,6 +146,26 @@ class ApiService {
       }
     } catch (e) {
       print('Get time slots error: $e');
+      rethrow;
+    }
+  }
+
+  // Get today's time slots for a room
+  static Future<List<dynamic>> getTodayTimeSlots(String roomId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/rooms/lecturer/$roomId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['time_slots'] ?? [];
+      } else {
+        throw Exception('Failed to load today\'s time slots: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get today time slots error: $e');
       rethrow;
     }
   }
@@ -252,6 +290,44 @@ class ApiService {
       rethrow;
     }
   }
+
+  // Get today's pending requests for lecturer
+  static Future<List<dynamic>> getTodayPendingRequests() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/bookings/pending'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load today\'s pending requests: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get today pending requests error: $e');
+      rethrow;
+    }
+  }
+
+  // Get approval history for lecturer
+  static Future<List<dynamic>> getLecturerHistory(String lecturerId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/bookings/history/$lecturerId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load lecturer history: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get lecturer history error: $e');
+      rethrow;
+    }
+  }
   
   // Update booking status
   static Future<Map<String, dynamic>> updateBookingStatus({
@@ -297,6 +373,44 @@ class ApiService {
       }
     } catch (e) {
       print('Get dashboard stats error: $e');
+      rethrow;
+    }
+  }
+
+  // Get today's dashboard stats
+  static Future<Map<String, dynamic>> getTodayDashboardStats() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/dashboard/stats/today'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load today\'s dashboard stats: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get today dashboard stats error: $e');
+      rethrow;
+    }
+  }
+
+  // Get lecturer dashboard stats
+  static Future<Map<String, dynamic>> getLecturerDashboardStats(String lecturerId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/dashboard/lecturer/$lecturerId'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load lecturer dashboard stats: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get lecturer dashboard stats error: $e');
       rethrow;
     }
   }
@@ -360,24 +474,24 @@ class ApiService {
     }
   }
 
-  // Add this method to ApiService class
-static Future<List<dynamic>> getStudentRequests(String studentId) async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
-      headers: headers,
-    ).timeout(const Duration(seconds: 10));
-    
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load requests: ${response.statusCode}');
+  // Get student requests
+  static Future<List<dynamic>> getStudentRequests(String studentId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load requests: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get student requests error: $e');
+      rethrow;
     }
-  } catch (e) {
-    print('Get student requests error: $e');
-    rethrow;
   }
-}
 
   // Clear all stored data
   static Future<void> clearAllData() async {
@@ -396,6 +510,28 @@ static Future<List<dynamic>> getStudentRequests(String studentId) async {
       return user != null && user['uid'] != null;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Get user type for routing
+  static Future<String?> getUserType() async {
+    try {
+      final user = await getCurrentUser();
+      return user?['userType']?.toString();
+    } catch (e) {
+      print('Get user type error: $e');
+      return null;
+    }
+  }
+
+  // Get lecturer ID
+  static Future<String?> getCurrentLecturerId() async {
+    try {
+      final user = await getCurrentUser();
+      return user?['uid']?.toString();
+    } catch (e) {
+      print('Get current lecturer ID error: $e');
+      return null;
     }
   }
 }

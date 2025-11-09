@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:room_booking/signin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends StatelessWidget {
   @override
@@ -235,7 +236,12 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          // Clear user data from SharedPreferences
+                          final storage = await SharedPreferences.getInstance();
+                          await storage.remove('user');
+                          
+                          // Navigate to login screen and clear all routes
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (_) => LoginScreen()),

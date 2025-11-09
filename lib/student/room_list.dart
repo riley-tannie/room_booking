@@ -18,7 +18,6 @@ class _RoomListState extends State<RoomList> {
   String? currentStudentId;
   String? currentStudentName;
 
-  // Define the 4 required time slots
   final List<String> allTimeSlots = ['08:00-10:00', '10:00-12:00', '13:00-15:00', '15:00-17:00'];
 
   @override
@@ -29,7 +28,6 @@ class _RoomListState extends State<RoomList> {
 
   @override
   void dispose() {
-    // Clean up any controllers or listeners here if needed
     super.dispose();
   }
 
@@ -45,10 +43,8 @@ class _RoomListState extends State<RoomList> {
       currentStudentName = user?['fullName'] ?? 'Student';
       
       if (currentStudentId != null) {
-        // Check if student has booked today
         hasBookedToday = await _checkIfStudentHasBookedToday(currentStudentId!);
         
-        // Load available rooms
         final roomsData = await ApiService.getAvailableRooms();
         
         if (!mounted) return;
@@ -60,12 +56,10 @@ class _RoomListState extends State<RoomList> {
             final room = BookingRoom.fromJson(roomData);
             final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
             
-            // Create time slots with proper status handling
             room.timeSlots = _createTimeSlotsWithStatus(timeSlotsData);
             
             availableRooms.add(room);
           } catch (e) {
-            print('Error loading room ${roomData['name']}: $e');
             continue;
           }
         }
@@ -77,12 +71,11 @@ class _RoomListState extends State<RoomList> {
       });
       
     } catch (e) {
-      print('Error loading data: $e');
       if (!mounted) return;
       setState(() {
         isLoading = false;
       });
-      _showErrorDialog('Failed to load rooms: $e');
+      _showErrorDialog('Failed to load rooms');
     }
   }
 
@@ -112,7 +105,6 @@ class _RoomListState extends State<RoomList> {
     final now = DateTime.now();
     final currentTime = now.hour * 60 + now.minute;
 
-    // Define time slots with their start times in minutes
     final timeSlotConfig = [
       {'time': '08:00-10:00', 'start': 8 * 60},
       {'time': '10:00-12:00', 'start': 10 * 60},
@@ -124,25 +116,26 @@ class _RoomListState extends State<RoomList> {
       final slotTime = slotConfig['time'] as String;
       final slotStart = slotConfig['start'] as int;
       
-      // Find matching slot from API data
-      final slotData = timeSlotsData.firstWhere(
-        (s) => s['time_slot'] == slotTime,
-        orElse: () => null,
-      );
+      dynamic slotData;
+      try {
+        slotData = timeSlotsData.firstWhere(
+          (s) => s['time_slot'] == slotTime,
+        );
+      } catch (e) {
+        slotData = null;
+      }
       
       String status = 'free';
       String displayStatus = 'Available';
       Color color = const Color(0xFF26A65B);
 
-      // Check if time slot has passed first
       if (currentTime >= slotStart) {
         status = 'disabled';
         displayStatus = 'Time Passed';
         color = const Color(0xFF6B7280);
       } 
-      // If we have slot data, use its status
       else if (slotData != null) {
-        status = slotData['status'] ?? 'free';
+        status = slotData['status']?.toString() ?? 'free';
         
         switch (status) {
           case 'pending':
@@ -209,7 +202,6 @@ class _RoomListState extends State<RoomList> {
       if (selectedTab == "All") {
         matchesTab = true;
       } else {
-        // Exact category matching based on your database
         matchesTab = room.category == selectedTab;
       }
       
@@ -476,7 +468,6 @@ class _RoomListState extends State<RoomList> {
     final availableSlots = room.timeSlots.where((slot) => 
         slot.status == 'free' && slot.displayStatus == 'Available').length;
     
-    // Check if user has booked today OR if room has no available slots
     final canBook = !hasBookedToday && availableSlots > 0 && !room.isDisabled;
 
     return Container(
@@ -570,7 +561,6 @@ class _RoomListState extends State<RoomList> {
               ),
             ),
             
-            // Updated booking button with disabled state
             if (hasBookedToday)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -613,7 +603,6 @@ class _RoomListState extends State<RoomList> {
   }
 
   void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
-    // Show ALL time slots, not just available ones
     final allSlots = room.timeSlots;
 
     showModalBottomSheet(
@@ -758,7 +747,6 @@ class _RoomListState extends State<RoomList> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Status Legend
                     _buildStatusLegend(),
                     const SizedBox(height: 16),
                     
@@ -848,7 +836,6 @@ class _RoomListState extends State<RoomList> {
   }
 
   Widget _buildTimeSlotCard(TimeSlot slot, BuildContext context, BookingRoom room) {
-    // Only allow booking if slot is free AND user hasn't booked today
     final canBook = slot.status == 'free' && !hasBookedToday;
     
     return Container(
@@ -994,9 +981,6 @@ class _RoomListState extends State<RoomList> {
         return;
       }
 
-      print('Attempting to book: Student=$studentId, Room=${room.id}, Time=${slot.time}');
-
-      // Final validation - ensure slot is still available
       if (slot.status != 'free') {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1008,7 +992,6 @@ class _RoomListState extends State<RoomList> {
         return;
       }
 
-      // Create the booking
       final result = await ApiService.createBooking(
         studentId: studentId,
         roomId: room.id,
@@ -1016,8 +999,8 @@ class _RoomListState extends State<RoomList> {
       );
       
       if (!mounted) return;
-      Navigator.pop(context); // Close confirmation dialog
-      Navigator.pop(context); // Close time slot selection
+      Navigator.pop(context);
+      Navigator.pop(context);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1036,7 +1019,6 @@ class _RoomListState extends State<RoomList> {
       await _loadData();
 
     } catch (e) {
-      print('Booking error details: $e');
       if (!mounted) return;
       
       String errorMessage = 'Booking failed';
@@ -1047,7 +1029,7 @@ class _RoomListState extends State<RoomList> {
         });
       } else if (e.toString().contains('no longer available')) {
         errorMessage = 'This time slot was just taken. Please try another slot.';
-        await _loadData(); // Refresh data to show current availability
+        await _loadData();
       } else if (e.toString().contains('Database error')) {
         errorMessage = 'Server error. Please try again.';
       } else {
@@ -1066,6 +1048,7 @@ class _RoomListState extends State<RoomList> {
 
   String _formatDateWithWeekday(DateTime date) {
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    return "${weekdays[date.weekday]}, ${date.day}/${date.month}/${date.year}";
+    final weekdayIndex = date.weekday % 7;
+    return "${weekdays[weekdayIndex]}, ${date.day}/${date.month}/${date.year}";
   }
 }

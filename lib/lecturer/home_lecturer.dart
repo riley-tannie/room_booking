@@ -4,6 +4,7 @@ import 'room_list_page_lecturer.dart';
 import 'booking_history_lecturer.dart';
 import 'profile_lecturer.dart';
 import 'admin_page_lecturer.dart';
+import '../api_service.dart';
 
 class HomeLecturer extends StatefulWidget {
   const HomeLecturer({super.key});
@@ -14,6 +15,20 @@ class HomeLecturer extends StatefulWidget {
 
 class _HomeLecturerState extends State<HomeLecturer> {
   int currentIndex = 0;
+  Map<String, dynamic>? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  void _loadCurrentUser() async {
+    final user = await ApiService.getCurrentUser();
+    setState(() {
+      currentUser = user;
+    });
+  }
 
   void setIndex(int index) {
     setState(() {
@@ -25,7 +40,7 @@ class _HomeLecturerState extends State<HomeLecturer> {
 
   late final List<Widget> _pages = [
     const RoomListPageLecturer(key: PageStorageKey('pageRooms')),
-    const AdminPageLecturer(key: PageStorageKey('pageAdmin')),
+    AdminPageLecturer(key: const PageStorageKey('pageAdmin')),
     DashboardLecturer(
       key: const PageStorageKey('pageDashboard'),
       onNavigateToAdmin: () => setIndex(1),

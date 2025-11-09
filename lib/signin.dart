@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'student/homepage.dart';
+import 'staff/home_staff.dart';
+import 'lecturer/home_lecturer.dart'; 
 import 'register.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,14 +34,37 @@ class _LoginScreenState extends State<LoginScreen> {
     if (userString != null) {
       final user = jsonDecode(userString);
       if (user['uid'] != null && mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
-          (route) => false,
-        );
+        _redirectBasedOnUserType(user);
       }
     }
   }
+
+  void _redirectBasedOnUserType(Map<String, dynamic> user) {
+  // Use 'role' instead of 'userType' since that's what the backend returns
+  final userRole = user['role'] ?? 'student';
+  
+  print('Redirecting user with role: $userRole');
+  
+  Widget targetScreen;
+  switch (userRole) {
+    case 'staff':
+      targetScreen = HomeStaff(); 
+      break;
+    case 'lecturer':
+      targetScreen = HomeLecturer(); 
+      break;
+    case 'student':
+    default:
+      targetScreen = HomeScreen();
+      break;
+  }
+  
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => targetScreen),
+    (route) => false,
+  );
+}
 
   void popDialog(String message) {
     showDialog(
@@ -86,12 +111,8 @@ class _LoginScreenState extends State<LoginScreen> {
         
         if (!mounted) return;
         
-        // Clear all routes and navigate to home
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
-          (route) => false,
-        );
+        // Redirect based on user type
+        _redirectBasedOnUserType(user);
       } else {
         final errorResponse = jsonDecode(response.body);
         if (!mounted) return;

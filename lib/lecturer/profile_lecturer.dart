@@ -1,8 +1,29 @@
 import 'package:flutter/material.dart';
 import '../signin.dart'; 
+import '../api_service.dart';
 
-class ProfileLecturer extends StatelessWidget {
+class ProfileLecturer extends StatefulWidget {
   const ProfileLecturer({super.key});
+
+  @override
+  State<ProfileLecturer> createState() => _ProfileLecturerState();
+}
+
+class _ProfileLecturerState extends State<ProfileLecturer> {
+  Map<String, dynamic>? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  void _loadCurrentUser() async {
+    final user = await ApiService.getCurrentUser();
+    setState(() {
+      currentUser = user;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +65,9 @@ class ProfileLecturer extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Dr. Johnathan Smith',
-            style: TextStyle(
+          Text(
+            currentUser?['fullName'] ?? 'Dr. Johnathan Smith',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -54,7 +75,7 @@ class ProfileLecturer extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Lecturer | Faculty of Engineering',
+            'Lecturer | ${currentUser?['role'] ?? 'Faculty of Engineering'}',
             style: TextStyle(
               color: Colors.grey[600],
               fontSize: 14,
@@ -213,7 +234,8 @@ class ProfileLecturer extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          await ApiService.logout();
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (_) => const LoginScreen()),

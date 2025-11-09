@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Nov 02, 2025 at 06:52 AM
+-- Generation Time: Nov 06, 2025 at 06:37 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.0.28
 
@@ -31,13 +31,25 @@ CREATE TABLE `bookings` (
   `id` varchar(50) NOT NULL,
   `student_id` varchar(20) NOT NULL,
   `room_id` varchar(20) NOT NULL,
-  `booking_date` date NOT NULL,
+  `booking_date` date NOT NULL DEFAULT curdate(),
   `time_slot` varchar(20) NOT NULL,
   `status` enum('Pending','Approved','Rejected') DEFAULT 'Pending',
   `booked_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `approved_by` varchar(20) DEFAULT NULL,
-  `approved_at` timestamp NULL DEFAULT NULL
+  `approved_at` timestamp NULL DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `bookings`
+--
+
+INSERT INTO `bookings` (`id`, `student_id`, `room_id`, `booking_date`, `time_slot`, `status`, `booked_at`, `approved_by`, `approved_at`, `image_url`) VALUES
+('book_1762313810850', 'STU12345', 'room_001', '2025-11-05', '13:00-15:00', 'Rejected', '2025-11-05 03:36:50', NULL, NULL, NULL),
+('book_sample_001', '6631501142', 'room_001', '2025-11-07', '10:00-12:00', 'Pending', '2025-11-06 17:14:31', NULL, NULL, NULL),
+('book_sample_002', '6631501142', 'room_002', '2025-11-07', '08:00-10:00', 'Approved', '2025-11-06 17:14:31', NULL, NULL, NULL),
+('book_sample_003', '6631501142', 'room_003', '2025-11-07', '13:00-15:00', 'Approved', '2025-11-06 17:14:31', NULL, NULL, NULL),
+('book_sample_004', '6631501142', 'room_002', '2025-11-07', '15:00-17:00', 'Pending', '2025-11-06 17:14:31', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -51,7 +63,7 @@ CREATE TABLE `rooms` (
   `category` enum('Study Room','Multimedia Room','Lecture Hall') NOT NULL,
   `location` varchar(200) NOT NULL,
   `description` text DEFAULT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT 'assets/images/default_room.jpg',
   `is_disabled` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -88,6 +100,32 @@ CREATE TABLE `room_availability` (
   `booking_id` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `room_availability`
+--
+
+INSERT INTO `room_availability` (`id`, `room_id`, `availability_date`, `time_slot`, `status`, `student_id`, `booking_id`) VALUES
+(82, 'room_001', '2025-11-07', '08:00-10:00', 'free', NULL, NULL),
+(83, 'room_001', '2025-11-07', '10:00-12:00', 'pending', '6631501142', 'book_sample_001'),
+(84, 'room_001', '2025-11-07', '13:00-15:00', 'free', NULL, NULL),
+(85, 'room_001', '2025-11-07', '15:00-17:00', 'free', NULL, NULL),
+(86, 'room_002', '2025-11-07', '08:00-10:00', 'reserved', '6631501142', 'book_sample_002'),
+(87, 'room_002', '2025-11-07', '10:00-12:00', 'free', NULL, NULL),
+(88, 'room_002', '2025-11-07', '13:00-15:00', 'free', NULL, NULL),
+(89, 'room_002', '2025-11-07', '15:00-17:00', 'pending', '6631501142', 'book_sample_004'),
+(90, 'room_003', '2025-11-07', '08:00-10:00', 'free', NULL, NULL),
+(91, 'room_003', '2025-11-07', '10:00-12:00', 'free', NULL, NULL),
+(92, 'room_003', '2025-11-07', '13:00-15:00', 'reserved', '6631501142', 'book_sample_003'),
+(93, 'room_003', '2025-11-07', '15:00-17:00', 'disabled', NULL, NULL),
+(94, 'room_004', '2025-11-07', '08:00-10:00', 'free', NULL, NULL),
+(95, 'room_004', '2025-11-07', '10:00-12:00', 'free', NULL, NULL),
+(96, 'room_004', '2025-11-07', '13:00-15:00', 'free', NULL, NULL),
+(97, 'room_004', '2025-11-07', '15:00-17:00', 'free', NULL, NULL),
+(98, 'room_005', '2025-11-07', '08:00-10:00', 'free', NULL, NULL),
+(99, 'room_005', '2025-11-07', '10:00-12:00', 'free', NULL, NULL),
+(100, 'room_005', '2025-11-07', '13:00-15:00', 'free', NULL, NULL),
+(101, 'room_005', '2025-11-07', '15:00-17:00', 'free', NULL, NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -98,7 +136,7 @@ CREATE TABLE `users` (
   `id` varchar(20) NOT NULL,
   `full_name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
-  `password` varchar(97) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `role` enum('student','lecturer','staff') NOT NULL,
   `faculty` varchar(100) DEFAULT NULL,
   `points` int(11) DEFAULT 0,
@@ -110,10 +148,11 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password`, `role`, `faculty`, `points`, `created_at`) VALUES
+('6531501142', 'Riley', '6531501142@lamduan.mfu.ac.th', '$argon2id$v=19$m=65536,t=3,p=1$di1m2jbJdjOEINGOhpzC0w$OwmYvm4zYhZZlZVCEXrEs7uGu1j/qPWTL0Rz51lpVR0', 'student', NULL, 0, '2025-11-06 14:03:38'),
+('6631501142', 'Riley Tang', '6631501142@lamduan.mfu.ac.th', '654321', 'student', 'Faculty of Engineering', 250, '2025-11-01 14:32:10'),
 ('LEC10001', 'Dr. Smith', 'lecturer@mfu.ac.th', '111111', 'lecturer', 'Faculty of Engineering', 0, '2025-11-01 14:32:10'),
 ('STAFF001', 'Admin Staff', 'staff@mfu.th', '123456', 'staff', 'Administration', 0, '2025-11-01 14:32:10'),
-('STU12345', 'Riley Tan', 'student@lamduan.mfu.ac.th', '123456', 'student', 'Faculty of Engineering', 320, '2025-11-01 14:32:10'),
-('6631501142', 'Riley Tang', '6631501142@lamduan.mfu.ac.th', '654321', 'student', 'Faculty of Engineering', 250, '2025-11-01 14:32:10');
+('STU12345', 'Riley Tan', 'student@lamduan.mfu.ac.th', '123456', 'student', 'Faculty of Engineering', 320, '2025-11-01 14:32:10');
 
 --
 -- Indexes for dumped tables
@@ -158,7 +197,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `room_availability`
 --
 ALTER TABLE `room_availability`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=102;
 
 --
 -- Constraints for dumped tables
@@ -178,82 +217,9 @@ ALTER TABLE `bookings`
 ALTER TABLE `room_availability`
   ADD CONSTRAINT `room_availability_ibfk_1` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`),
   ADD CONSTRAINT `room_availability_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `room_availability_ibfk_3` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`);
+  ADD CONSTRAINT `room_availability_ibfk_3` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
--- Clear existing room availability data
-DELETE FROM room_availability;
-
--- Insert sample room availability data with CORRECT time slots for TODAY
-INSERT INTO `room_availability` (`room_id`, `availability_date`, `time_slot`, `status`, `student_id`, `booking_id`) VALUES
--- Room 001: Mixed statuses
-('room_001', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_001', CURDATE(), '10:00-12:00', 'pending', '6631501142', NULL),
-('room_001', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_001', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 002: More mixed statuses
-('room_002', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
-('room_002', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
-('room_002', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_002', CURDATE(), '15:00-17:00', 'pending', '6631501142', NULL),
-
--- Room 003: Different pattern
-('room_003', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_003', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
-('room_003', CURDATE(), '13:00-15:00', 'reserved', '6631501142', NULL),
-('room_003', CURDATE(), '15:00-17:00', 'disabled', NULL, NULL),
-
--- Room 004: Mostly available
-('room_004', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_004', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
-('room_004', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_004', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 005: All free
-('room_005', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_005', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
-('room_005', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_005', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 006: Morning busy
-('room_006', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
-('room_006', CURDATE(), '10:00-12:00', 'pending', '6631501142', NULL),
-('room_006', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_006', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 007: Afternoon free
-('room_007', CURDATE(), '08:00-10:00', 'disabled', NULL, NULL),
-('room_007', CURDATE(), '10:00-12:00', 'disabled', NULL, NULL),
-('room_007', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_007', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 008: Evening only
-('room_008', CURDATE(), '08:00-10:00', 'reserved', '6631501142', NULL),
-('room_008', CURDATE(), '10:00-12:00', 'reserved', '6631501142', NULL),
-('room_008', CURDATE(), '13:00-15:00', 'pending', '6631501142', NULL),
-('room_008', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 009: All day available
-('room_009', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_009', CURDATE(), '10:00-12:00', 'free', NULL, NULL),
-('room_009', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_009', CURDATE(), '15:00-17:00', 'free', NULL, NULL),
-
--- Room 010: Limited availability
-('room_010', CURDATE(), '08:00-10:00', 'free', NULL, NULL),
-('room_010', CURDATE(), '10:00-12:00', 'disabled', NULL, NULL),
-('room_010', CURDATE(), '13:00-15:00', 'free', NULL, NULL),
-('room_010', CURDATE(), '15:00-17:00', 'disabled', NULL, NULL);
-
--- Add some sample bookings for the student
-INSERT INTO `bookings` (`id`, `student_id`, `room_id`, `booking_date`, `time_slot`, `status`, `booked_at`) VALUES
-('book_001', '6631501142', 'room_001', CURDATE(), '10:00-12:00', 'Pending', NOW()),
-('book_002', '6631501142', 'room_002', CURDATE(), '08:00-10:00', 'Approved', NOW()),
-('book_003', '6631501142', 'room_003', CURDATE(), '13:00-15:00', 'Approved', NOW()),
-('book_004', '6631501142', 'room_006', CURDATE(), '08:00-10:00', 'Approved', NOW()),
-('book_005', '6631501142', 'room_008', CURDATE(), '13:00-15:00', 'Pending', NOW());
