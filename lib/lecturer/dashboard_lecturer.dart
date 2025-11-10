@@ -15,43 +15,43 @@ class DashboardLecturer extends StatefulWidget {
   State<DashboardLecturer> createState() => _DashboardLecturerState();
 }
 
-class _DashboardLecturerState extends State<DashboardLecturer> {
+class _DashboardLecturerState extends State<DashboardLecturer>
+    with SingleTickerProviderStateMixin {
   Map<String, dynamic>? dashboardStats;
   bool isLoading = true;
+  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
     _loadDashboardStats();
   }
 
   Future<void> _loadDashboardStats() async {
     try {
-      // Use today-specific dashboard stats
       final stats = await ApiService.getTodayDashboardStats();
-      // Ensure we have valid numbers, default to 0 if null
       setState(() {
         dashboardStats = {
           'free_slots': stats['free_slots'] ?? 0,
-          'pending_slots': stats['pending_slots'] ?? 0,
+          'pending_requests': stats['pending_requests'] ?? 0,
           'reserved_slots': stats['reserved_slots'] ?? 0,
           'disabled_rooms': stats['disabled_rooms'] ?? 0,
-          'pending_requests': stats['pending_requests'] ?? 0,
-          'approved_today': stats['approved_today'] ?? 0,
         };
         isLoading = false;
+        _controller.forward(from: 0);
       });
     } catch (e) {
       print('Error loading dashboard stats: $e');
-      // Fallback to default values
       setState(() {
         dashboardStats = {
           'free_slots': 0,
-          'pending_slots': 0,
+          'pending_requests': 0,
           'reserved_slots': 0,
           'disabled_rooms': 0,
-          'pending_requests': 0,
-          'approved_today': 0,
         };
         isLoading = false;
       });
@@ -59,260 +59,137 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Container(
+      color: const Color(0xFFF8FAFC),
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Today's Overview",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2A3A),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Statistics for ${_getFormattedDate()}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          // Quick Actions
-          _buildQuickActions(),
-          const SizedBox(height: 24),
-          
-          // Statistics Grid
-          const Text(
-            'Room Availability',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2A3A),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          if (isLoading)
-            _buildLoadingGrid()
-          else
-            GridView.count(
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.2,
+              crossAxisSpacing: 18,
+              mainAxisSpacing: 18,
+              childAspectRatio: 1.05,
               children: [
                 _buildStatusCard(
-                  'Free Slots', 
-                  dashboardStats?['free_slots']?.toString() ?? '0', 
-                  const Color(0xFF26A65B), 
-                  Icons.check_circle_outline,
-                  'Available for booking'
+                  title: 'Free',
+                  count: dashboardStats?['free_slots'] ?? 0,
+                  color: const Color(0xFF10B981),
+                  icon: Icons.meeting_room_rounded,
+                  gradient: const [Color(0xFFDCFCE7), Color(0xFFA7F3D0)],
+                  subtitle: 'Available now',
                 ),
                 _buildStatusCard(
-                  'Pending Requests', 
-                  dashboardStats?['pending_requests']?.toString() ?? '0', 
-                  const Color(0xFFF59E0B), 
-                  Icons.pending_actions,
-                  'Awaiting approval'
+                  title: 'Pending',
+                  count: dashboardStats?['pending_requests'] ?? 0,
+                  color: const Color(0xFFF59E0B),
+                  icon: Icons.pending_actions_rounded,
+                  gradient: const [Color(0xFFFFFBEB), Color(0xFFFDE68A)],
+                  subtitle: 'Waiting approval',
                 ),
                 _buildStatusCard(
-                  'Approved Today', 
-                  dashboardStats?['reserved_slots']?.toString() ?? '0', 
-                  const Color(0xFF428BCA), 
-                  Icons.verified,
-                  'Confirmed bookings'
+                  title: 'Reserved',
+                  count: dashboardStats?['reserved_slots'] ?? 0,
+                  color: const Color(0xFF3B82F6),
+                  icon: Icons.verified_rounded,
+                  gradient: const [Color(0xFFDBEAFE), Color(0xFFBFDBFE)],
+                  subtitle: 'Approved bookings',
                 ),
                 _buildStatusCard(
-                  'Disabled Rooms', 
-                  dashboardStats?['disabled_rooms']?.toString() ?? '0', 
-                  const Color(0xFF6B7280), 
-                  Icons.block,
-                  'Unavailable rooms'
+                  title: 'Disabled',
+                  count: dashboardStats?['disabled_rooms'] ?? 0,
+                  color: const Color(0xFF9CA3AF),
+                  icon: Icons.block_rounded,
+                  gradient: const [Color(0xFFF3F4F6), Color(0xFFE5E7EB)],
+                  subtitle: 'Not available',
                 ),
               ],
             ),
-        ],
-      ),
     );
   }
 
-  Widget _buildQuickActions() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2A3A),
+  Widget _buildStatusCard({
+    required String title,
+    required int count,
+    required Color color,
+    required IconData icon,
+    required List<Color> gradient,
+    required String subtitle,
+  }) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final animatedCount = (count * _controller.value).toInt();
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: widget.onNavigateToAdmin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2C5473),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.rule, size: 20),
-                  label: const Text(
-                    'Manage Requests',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: widget.onNavigateToHistory,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8EDF1),
-                    foregroundColor: const Color(0xFF2C5473),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.history, size: 20),
-                  label: const Text(
-                    'View History',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.25),
+                blurRadius: 8,
+                offset: const Offset(2, 4),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.2,
-      children: [
-        _buildLoadingCard(),
-        _buildLoadingCard(),
-        _buildLoadingCard(),
-        _buildLoadingCard(),
-      ],
-    );
-  }
-
-  Widget _buildLoadingCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusCard(String title, String count, Color color, IconData icon, String subtitle) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, size: 24, color: color),
-                const Spacer(),
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(icon, size: 28, color: color),
+                  ),
+                ),
                 Text(
-                  count,
+                  "$animatedCount",
                   style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
                     color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: color.withOpacity(0.9),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
-  }
-
-  String _getFormattedDate() {
-    final now = DateTime.now();
-    return '${now.day}/${now.month}/${now.year}';
   }
 }

@@ -19,23 +19,31 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
   }
 
   Future<void> _loadHistory() async {
+    setState(() => isLoading = true);
     try {
       final user = await ApiService.getCurrentUser();
-      if (user != null) {
-        final allBookings = await ApiService.getAllBookings();
-        // Filter for today's approvals by this lecturer only
+      if (user == null) {
         setState(() {
-          historyEntries = allBookings
-              .where((booking) => 
-                  booking['approved_by'] == user['uid'] &&
-                  _isToday(booking['approved_at']))
-              .toList();
+          historyEntries = [];
           isLoading = false;
         });
+        return;
       }
-    } catch (e) {
-      print('Error loading history: $e');
+
+      final allBookings = await ApiService.getAllBookings();
       setState(() {
+        historyEntries = allBookings
+            .where((b) =>
+                b['approved_by'] == user['uid'] &&
+                b['approved_at'] != null &&
+                _isToday(b['approved_at']))
+            .toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading lecturer history: $e');
+      setState(() {
+        historyEntries = [];
         isLoading = false;
       });
     }
@@ -47,145 +55,100 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
       final date = DateTime.parse(dateString).toLocal();
       final today = DateTime.now().toLocal();
       return date.year == today.year &&
-             date.month == today.month &&
-             date.day == today.day;
+          date.month == today.month &&
+          date.day == today.day;
     } catch (e) {
       return false;
     }
   }
 
-  String _formatActionTime(String? timeString) {
-    if (timeString == null) return 'Unknown time';
+  String _formatDate(String? dateString) {
+    if (dateString == null) return '-';
     try {
-      final time = DateTime.parse(timeString).toLocal();
-      final hour = time.hour.toString().padLeft(2, '0');
-      final minute = time.minute.toString().padLeft(2, '0');
-      return 'at $hour:$minute';
+      final date = DateTime.parse(dateString).toLocal();
+      return '${date.day}/${date.month}/${date.year}';
     } catch (e) {
-      return 'Invalid time';
+      return '-';
     }
   }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Unknown date';
+  String _formatTime(String? dateString) {
+    if (dateString == null) return '-';
     try {
       final date = DateTime.parse(dateString).toLocal();
-      final day = date.day.toString().padLeft(2, '0');
-      final month = date.month.toString().padLeft(2, '0');
-      return '$day/$month/${date.year}';
+      return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      return 'Invalid date';
+      return '-';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Today's Approval History",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2A3A),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your decisions for ${_getFormattedDate()}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          if (isLoading)
-            _buildLoadingState()
-          else if (historyEntries.isEmpty)
-            _buildEmptyState()
-          else
-            ...historyEntries.map((entry) => _buildHistoryCard(context, entry)),
-        ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FBFA),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : historyEntries.isEmpty
+                  ? _buildEmptyHistory()
+                  : ListView.builder(
+                      itemCount: historyEntries.length,
+                      itemBuilder: (context, index) {
+                        final entry = historyEntries[index];
+                        return _buildHistoryCard(entry);
+                      },
+                    ),
+        ),
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text(
-            'Loading history...',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
+  Widget _buildEmptyHistory() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.history_toggle_off,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'No Actions Today',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1E2A3A),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              'Your approval decisions for today will appear here.',
-              textAlign: TextAlign.center,
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            const Text(
+              "No Approval History",
               style: TextStyle(
-                color: Colors.grey[600],
+                color: Colors.grey,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _loadHistory,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2C5473),
-              foregroundColor: Colors.white,
+            const SizedBox(height: 8),
+            const Text(
+              "Your approvals will appear here once you approve or reject a booking.",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
             ),
-            child: const Text('Refresh History'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHistoryCard(BuildContext context, Map<String, dynamic> entry) {
+  Widget _buildHistoryCard(Map<String, dynamic> entry) {
     final isApproved = entry['status'] == 'Approved';
-    final color = isApproved ? const Color(0xFF26A65B) : const Color(0xFFEF4444);
-    final icon = isApproved ? Icons.check_circle : Icons.cancel;
-    final actionText = isApproved ? 'Approved' : 'Rejected';
-    final bgColor = isApproved ? const Color(0xFFE8F5E8) : const Color(0xFFFFEBEE);
+    final sideColor =
+        isApproved ? const Color(0xFF26A65B) : const Color(0xFFEF4444);
+    final statusColor = sideColor;
+    final statusText = isApproved ? 'Approved' : 'Rejected';
+    final statusBg = isApproved
+        ? const Color(0xFF26A65B).withOpacity(0.1)
+        : const Color(0xFFEF4444).withOpacity(0.1);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -197,189 +160,113 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${entry['room_name']}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Student: ${entry['student_name']}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    'Time: ${entry['time_slot']} • ${_formatDate(entry['booking_date'])}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          actionText,
-                          style: TextStyle(
-                            color: color,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatActionTime(entry['approved_at']),
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                _showBookingDetails(entry);
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFA),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showBookingDetails(Map<String, dynamic> entry) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      entry['status'] == 'Approved' ? Icons.check_circle : Icons.cancel,
-                      color: entry['status'] == 'Approved' ? const Color(0xFF26A65B) : const Color(0xFFEF4444),
-                      size: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Booking Details',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: 4,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: sideColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                _buildDetailRow('Room', entry['room_name']),
-                _buildDetailRow('Student', entry['student_name']),
-                _buildDetailRow('Date', _formatDate(entry['booking_date'])),
-                _buildDetailRow('Time Slot', entry['time_slot']),
-                _buildDetailRow('Status', entry['status']),
-                _buildDetailRow('Decision Time', _formatActionTime(entry['approved_at'])),
-                const SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF2C5473),
-                    ),
-                    child: const Text('Close'),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry['room_name'] ?? 'Unknown Room',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Color(0xFF0E3C6E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Student: ${entry['student_name'] ?? '-'}',
+                        style: const TextStyle(
+                            fontSize: 13, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time,
+                              size: 14, color: Colors.black54),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_formatDate(entry['booking_date'])} • ${entry['time_slot'] ?? '-'}',
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: statusColor, width: 1),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'at ${_formatTime(entry['approved_at'])}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+          Container(
+            width: double.infinity,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: statusBg,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
-          ),
-          Expanded(
-            flex: 3,
             child: Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w400,
-                color: Colors.black87,
+              isApproved
+                  ? 'Reservation Approved Successfully'
+                  : 'Reservation Rejected',
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
               ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  String _getFormattedDate() {
-    final now = DateTime.now();
-    return '${now.day}/${now.month}/${now.year}';
   }
 }

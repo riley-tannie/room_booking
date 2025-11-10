@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // For iOS simulator, use localhost
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://192.168.0.111:3000';
   
   static final Map<String, String> headers = {
     'Content-Type': 'application/json',

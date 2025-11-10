@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'signin.dart';
+// import 'signin.dart';
+import 'lecturer/home_lecturer.dart'; 
 import 'app_theme.dart'; 
 
 void main() {
@@ -12,7 +13,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Room Reservation',
       theme: AppTheme.themeData,
-      home: LoginScreen(),
+      // home: LoginScreen(),
+      home: HomeLecturer(), 
       debugShowCheckedModeBanner: false,
     );
   }

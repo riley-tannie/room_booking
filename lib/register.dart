@@ -12,7 +12,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final String url = 'localhost:3000';
+  final String url = '192.168.0.111:3000';
   bool isWaiting = false;
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _idNumberController = TextEditingController();
