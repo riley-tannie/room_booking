@@ -1,6 +1,6 @@
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl = '172.25.32.63:3000';
+  static const String apiBaseUrl = 'http://172.25.63.131:3000'; //your backend server URL
   //static const Duration apiTimeout = Duration(seconds: 10);
   //static const Duration apiLongTimeout = Duration(seconds: 15);
 

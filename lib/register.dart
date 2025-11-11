@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'signin.dart';
 import 'package:http/http.dart' as http;
+import 'constant/app_constant.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -12,7 +13,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final String url = 'localhost:3000';
+  final String url = '${AppConstants.apiBaseUrl}';
   bool isWaiting = false;
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _idNumberController = TextEditingController();
