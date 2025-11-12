@@ -238,7 +238,7 @@ class _ProfileLecturerState extends State<ProfileLecturer> {
                           await ApiService.logout();
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            MaterialPageRoute(builder: (_) => const SignInScreen()),
                             (route) => false,
                           );
                         },
