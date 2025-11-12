@@ -1,91 +1,120 @@
 import 'package:flutter/material.dart';
-import '../signin.dart';
+import '../signin.dart'; 
+import '../api_service.dart';
 
-class ProfileLecturer extends StatelessWidget {
+class ProfileLecturer extends StatefulWidget {
   const ProfileLecturer({super.key});
 
   @override
+  State<ProfileLecturer> createState() => _ProfileLecturerState();
+}
+
+class _ProfileLecturerState extends State<ProfileLecturer> {
+  Map<String, dynamic>? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  void _loadCurrentUser() async {
+    final user = await ApiService.getCurrentUser();
+    setState(() {
+      currentUser = user;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        backgroundColor: const Color(0xFF2C5473),
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 20),
-            _buildMenuItems(context),
-          ],
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildProfileHeader(context),
+          const SizedBox(height: 20),
+          _buildMenuItems(context),
+        ],
       ),
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: Colors.blue[100],
-              child: const Icon(
-                Icons.person,
-                size: 40,
-                color: Color(0xFF2C5473),
-              ),
+  Widget _buildProfileHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 45,
+            backgroundColor: const Color(0xFFE8EDF1),
+            child: Icon(
+              Icons.person_pin,
+              size: 50,
+              color: const Color(0xFF2C5473),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Dr. Johnathan Smith',
+          ),
+          const SizedBox(height: 16),
+          Text(
+            currentUser?['fullName'] ?? 'Dr. Johnathan Smith',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Lecturer | ${currentUser?['role'] ?? 'Faculty of Engineering'}',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFB9EACF),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Approval Rank: High Priority',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF26A65B),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Lecturer | Faculty of Engineering',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFB9EACF),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Approval Rank: High Priority',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF26A65B),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildMenuItems(BuildContext context) {
-    return Card(
-      elevation: 4,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           _buildMenuItem('Personal Info', Icons.person_outline),
@@ -99,31 +128,50 @@ class ProfileLecturer extends StatelessWidget {
   }
 
   Widget _buildMenuItem(String title, IconData icon, {bool isSignOut = false, BuildContext? context}) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSignOut ? const Color(0xFFEF6666) : const Color(0xFF2C5473),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSignOut ? const Color(0xFFEF6666) : Colors.black87,
-          fontWeight: FontWeight.w500,
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: isSignOut
+              ? BorderSide.none
+              : BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
         ),
       ),
-      trailing: isSignOut ? null : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: () {
-        if (isSignOut && context != null) {
-          _handleSignOut(context);
-        } else {
-          ScaffoldMessenger.of(context!).showSnackBar(
-            SnackBar(
-              content: Text('Navigating to $title...'),
-              backgroundColor: const Color(0xFF2C5473),
-            ),
-          );
-        }
-      },
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSignOut ? const Color(0xFFEF6666) : const Color(0xFF2C5473),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSignOut ? const Color(0xFFEF6666) : Colors.black87,
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+          ),
+        ),
+        trailing: isSignOut
+            ? null
+            : const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: () {
+          if (isSignOut && context != null) {
+            _handleSignOut(context);
+          } else {
+            ScaffoldMessenger.of(context!).showSnackBar(
+              SnackBar(
+                content: Text('Navigating to $title...'),
+                backgroundColor: const Color(0xFF2C5473),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 
@@ -131,28 +179,89 @@ class ProfileLecturer extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Sign Out'),
-          content: const Text('You will be logged out and returned to the sign-in screen.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SignInScreen()),
-                  (route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text('Sign Out'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Confirm Sign Out',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'You will be logged out and returned to the sign-in screen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          backgroundColor: const Color(0xFFE8EDF1),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF2C5473),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await ApiService.logout();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF6666),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign Out',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
