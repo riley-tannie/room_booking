@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard_lecturer.dart';
-import 'room_list_page_lecturer.dart';
+import 'room_list_lecturer.dart';
 import 'booking_history_lecturer.dart';
 import 'profile_lecturer.dart';
 import 'admin_page_lecturer.dart';
