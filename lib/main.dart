@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Room Reservation',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.themeData,
       home: SignInScreen(),
       debugShowCheckedModeBanner: false,
     );
