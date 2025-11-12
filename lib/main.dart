@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Room Reservation',
       theme: AppTheme.themeData,
-      home: SignInScreen(),
+      home: LoginScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
