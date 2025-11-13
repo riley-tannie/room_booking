@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'constant/app_constant.dart';
 
 class ApiService {
   // For iOS simulator, use localhost
-  static const String baseUrl = '${AppConstants.apiBaseUrl}';
+  static const String baseUrl = 'http://localhost:3000';
   
   static final Map<String, String> headers = {
     'Content-Type': 'application/json',
