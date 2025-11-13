@@ -266,24 +266,24 @@ class BookingHistory extends StatelessWidget {
                       ),
                       
                       // Show approved by information if available
-                      if (booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.person, size: 12, color: Colors.green),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Approved by: ${booking.approvedBy}',
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      if (booking.approvedByName != null && booking.approvedByName!.isNotEmpty)
+  Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Row(
+      children: [
+        const Icon(Icons.person, size: 12, color: Colors.green),
+        const SizedBox(width: 4),
+        Text(
+          'Approved by: ${booking.approvedByName}', // Use approvedByName instead of approvedBy
+          style: const TextStyle(
+            color: Colors.green,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
+  ),
                       
                       const SizedBox(height: 8),
                       Row(

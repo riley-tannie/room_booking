@@ -50,87 +50,94 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void register() async {
-    setState(() {
-      isWaiting = true;
-    });
+  setState(() {
+    isWaiting = true;
+  });
 
-    final fullName = _fullNameController.text.trim();
-    final idNumber = _idNumberController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final confirmPassword = _confirmPasswordController.text.trim();
+  final fullName = _fullNameController.text.trim();
+  final idNumber = _idNumberController.text.trim();
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
+  final confirmPassword = _confirmPasswordController.text.trim();
 
-    // Validation
-    if (fullName.isEmpty) {
-      popDialog('Error', 'Please enter your full name');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    if (idNumber.isEmpty) {
-      popDialog('Error', 'Please enter your ID number');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    if (email.isEmpty) {
-      popDialog('Error', 'Please enter your email');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    if (password.isEmpty) {
-      popDialog('Error', 'Please enter a password');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    if (password != confirmPassword) {
-      popDialog('Error', 'Passwords do not match');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    if (password.length < 6) {
-      popDialog('Error', 'Password must be at least 6 characters long');
-      setState(() => isWaiting = false);
-      return;
-    }
-
-    try {
-      final Uri uri = Uri.http(url, '/api/register');
-      final Map userData = {
-        'fullName': fullName,
-        'idNumber': idNumber,
-        'email': email,
-        'password': password, // Password will be hashed on the server
-      };
-
-      final http.Response response = await http
-          .post(
-            uri,
-            body: jsonEncode(userData),
-            headers: {'Content-Type': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        popDialog('Success', 'Registration successful! You can now sign in.', isSuccess: true);
-      } else {
-        final errorResponse = jsonDecode(response.body);
-        popDialog('Error', errorResponse['error'] ?? 'Registration failed');
-      }
-    } on TimeoutException {
-      popDialog('Error', 'Timeout error, try again!');
-    } catch (e) {
-      popDialog('Error', 'Registration failed. Please try again.');
-    } finally {
-      setState(() {
-        isWaiting = false;
-      });
-    }
+  // Validation
+  if (fullName.isEmpty) {
+    popDialog('Error', 'Please enter your full name');
+    setState(() => isWaiting = false);
+    return;
   }
+
+  if (idNumber.isEmpty) {
+    popDialog('Error', 'Please enter your ID number');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  if (email.isEmpty) {
+    popDialog('Error', 'Please enter your email');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  // Email domain validation
+  if (!email.endsWith('@lamduan.mfu.ac.th')) {
+    popDialog('Error', 'Only @lamduan.mfu.ac.th email addresses are allowed for registration');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  if (password.isEmpty) {
+    popDialog('Error', 'Please enter a password');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  if (password != confirmPassword) {
+    popDialog('Error', 'Passwords do not match');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  if (password.length < 6) {
+    popDialog('Error', 'Password must be at least 6 characters long');
+    setState(() => isWaiting = false);
+    return;
+  }
+
+  try {
+    final Uri uri = Uri.http(url, '/api/register');
+    final Map userData = {
+      'fullName': fullName,
+      'idNumber': idNumber,
+      'email': email,
+      'password': password,
+    };
+
+    final http.Response response = await http
+        .post(
+          uri,
+          body: jsonEncode(userData),
+          headers: {'Content-Type': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      popDialog('Success', 'Registration successful! You can now sign in.', isSuccess: true);
+    } else {
+      final errorResponse = jsonDecode(response.body);
+      popDialog('Error', errorResponse['error'] ?? 'Registration failed');
+    }
+  } on TimeoutException {
+    popDialog('Error', 'Timeout error, try again!');
+  } catch (e) {
+    popDialog('Error', 'Registration failed. Please try again.');
+  } finally {
+    setState(() {
+      isWaiting = false;
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {

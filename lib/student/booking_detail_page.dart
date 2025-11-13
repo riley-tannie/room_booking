@@ -164,10 +164,14 @@ class BookingDetailPage extends StatelessWidget {
                     _buildDetailRow('Student ID', booking.studentId),
                     _buildDetailRow('Student Name', booking.studentName),
                     
-                    // Show approval information if available
-                    if (booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
-                      _buildDetailRow('Approved By', booking.approvedBy!)
-                      
+                    // Show approval information if available - UPDATED
+                    if (booking.approvedByName != null && booking.approvedByName!.isNotEmpty)
+                      _buildDetailRow('Approved By', booking.approvedByName!),
+                    
+                    // Fallback to ID if name is not available
+                    if ((booking.approvedByName == null || booking.approvedByName!.isEmpty) && 
+                        booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
+                      _buildDetailRow('Approved By', booking.approvedBy!),
                   ],
                 ),
               ),
@@ -242,14 +246,29 @@ class BookingDetailPage extends StatelessWidget {
                       ),
                     ),
                     
-                    // Additional status information for approved/rejected bookings
-                    if (booking.approvedBy != null && booking.approvedBy!.isNotEmpty)
+                    // Additional status information for approved/rejected bookings - UPDATED
+                    if (booking.approvedByName != null && booking.approvedByName!.isNotEmpty && 
+                        booking.bookedAt != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          booking.status == 'Approved' 
-                            ? 'Approved by ${booking.approvedBy} on ${_formatDateTime( booking.bookedAt)}'
-                            : 'Rejected by ${booking.approvedBy} on ${_formatDateTime(booking.bookedAt)}',
+                          '${booking.status} by ${booking.approvedByName} on ${_formatDateTime(booking.bookedAt!)}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    
+                    // Fallback if approvedByName is not available
+                    if ((booking.approvedByName == null || booking.approvedByName!.isEmpty) && 
+                        booking.approvedBy != null && booking.approvedBy!.isNotEmpty && 
+                        booking.bookedAt != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '${booking.status} by ${booking.approvedBy} on ${_formatDateTime(booking.bookedAt!)}',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,

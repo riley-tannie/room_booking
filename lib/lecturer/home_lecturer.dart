@@ -40,12 +40,8 @@ class _HomeLecturerState extends State<HomeLecturer> {
 
   late final List<Widget> _pages = [
     const RoomListPageLecturer(key: PageStorageKey('pageRooms')),
-    AdminPageLecturer(key: const PageStorageKey('pageAdmin')),
-    DashboardLecturer(
-      key: const PageStorageKey('pageDashboard'),
-      onNavigateToAdmin: () => setIndex(1),
-      onNavigateToHistory: () => setIndex(3),
-    ),
+    const AdminPageLecturer(key: PageStorageKey('pageAdmin')),
+    const DashboardLecturer(key: PageStorageKey('pageDashboard')),
     const BookingHistoryLecturer(key: PageStorageKey('pageHistory')),
     const ProfileLecturer(key: PageStorageKey('pageProfile')),
   ];

@@ -107,7 +107,7 @@ class _RoomListPageLecturerState extends State<RoomListPageLecturer> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Real-time status for ${_getFormattedDate()}',
+            'Today is ${_getFormattedDate()}',
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,

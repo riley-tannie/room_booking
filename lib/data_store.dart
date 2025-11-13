@@ -100,6 +100,7 @@ class UserBooking {
   final DateTime bookedAt;
   final String roomLocation;
   final String roomImageUrl;
+  final String? approvedByName;
   final String? approvedBy;
 
   UserBooking({
@@ -114,6 +115,7 @@ class UserBooking {
     required this.bookedAt,
     required this.roomLocation,
     required this.roomImageUrl,
+    this.approvedByName,
     this.approvedBy,
   });
 
@@ -148,6 +150,7 @@ class UserBooking {
       bookedAt: bookedAt,
       roomLocation: json['location'] ?? '',
       roomImageUrl: json['image_url'] ?? 'assets/images/default_room.jpg',
+      approvedByName: json['approved_by_name']?.toString(),
       approvedBy: json['approved_by'],
     );
   }

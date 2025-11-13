@@ -95,7 +95,7 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Your decisions for ${_getFormattedDate()}',
+            'Today is ${_getFormattedDate()}',
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,

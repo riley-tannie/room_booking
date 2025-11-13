@@ -240,7 +240,7 @@ class _AdminPageLecturerState extends State<AdminPageLecturer> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Review and manage room booking requests from students',
+          'Manage room booking requests from students',
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey,

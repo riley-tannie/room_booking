@@ -26,14 +26,8 @@ class _RoomListState extends State<RoomList> {
     _loadData();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   Future<void> _loadData() async {
     try {
-      if (!mounted) return;
       setState(() {
         isLoading = true;
       });
@@ -43,60 +37,33 @@ class _RoomListState extends State<RoomList> {
       currentStudentName = user?['fullName'] ?? 'Student';
       
       if (currentStudentId != null) {
-        hasBookedToday = await _checkIfStudentHasBookedToday(currentStudentId!);
-        
+        hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
         final roomsData = await ApiService.getAvailableRooms();
         
-        if (!mounted) return;
-        
         availableRooms.clear();
-        
         for (var roomData in roomsData) {
-          try {
-            final room = BookingRoom.fromJson(roomData);
-            final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
-            
-            room.timeSlots = _createTimeSlotsWithStatus(timeSlotsData);
-            
-            availableRooms.add(room);
-          } catch (e) {
-            continue;
-          }
+          final room = BookingRoom.fromJson(roomData);
+          room.timeSlots = [];
+          availableRooms.add(room);
         }
       }
       
-      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
-      
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
-      _showErrorDialog('Failed to load rooms');
     }
   }
 
-  Future<bool> _checkIfStudentHasBookedToday(String studentId) async {
+  Future<void> _loadTimeSlotsForRoom(BookingRoom room) async {
     try {
-      final todayRequests = await _loadStudentRequests();
-      return todayRequests.isNotEmpty;
+      final timeSlotsData = await ApiService.getRoomTimeSlots(room.id);
+      room.timeSlots = _createTimeSlotsWithStatus(timeSlotsData);
     } catch (e) {
-      return false;
-    }
-  }
-
-  Future<List<UserBooking>> _loadStudentRequests() async {
-    final studentId = await ApiService.getCurrentStudentId();
-    if (studentId == null) return [];
-
-    try {
-      final requestsData = await ApiService.getStudentRequests(studentId);
-      return requestsData.map((request) => UserBooking.fromJson(request)).toList();
-    } catch (e) {
-      return [];
+      room.timeSlots = _createTimeSlotsWithStatus([]);
     }
   }
 
@@ -106,37 +73,34 @@ class _RoomListState extends State<RoomList> {
     final currentTime = now.hour * 60 + now.minute;
 
     final timeSlotConfig = [
-      {'time': '08:00-10:00', 'start': 8 * 60},
-      {'time': '10:00-12:00', 'start': 10 * 60},
-      {'time': '13:00-15:00', 'start': 13 * 60},
-      {'time': '15:00-17:00', 'start': 15 * 60},
+      {'time': '08:00-10:00', 'start': 8 * 60, 'end': 10 * 60},
+      {'time': '10:00-12:00', 'start': 10 * 60, 'end': 12 * 60},
+      {'time': '13:00-15:00', 'start': 13 * 60, 'end': 15 * 60},
+      {'time': '15:00-17:00', 'start': 15 * 60, 'end': 17 * 60},
     ];
 
     for (var slotConfig in timeSlotConfig) {
       final slotTime = slotConfig['time'] as String;
-      final slotStart = slotConfig['start'] as int;
+      final slotEnd = slotConfig['end'] as int;
+      final isTimePassed = currentTime >= slotEnd;
       
       dynamic slotData;
       try {
-        slotData = timeSlotsData.firstWhere(
-          (s) => s['time_slot'] == slotTime,
-        );
+        slotData = timeSlotsData.firstWhere((s) => s['time_slot'] == slotTime);
       } catch (e) {
         slotData = null;
       }
-      
-      String status = 'free';
-      String displayStatus = 'Available';
-      Color color = const Color(0xFF26A65B);
 
-      if (currentTime >= slotStart) {
-        status = 'disabled';
+      String status;
+      String displayStatus;
+      Color color;
+
+      if (isTimePassed) {
+        status = 'time_passed';
         displayStatus = 'Time Passed';
-        color = const Color(0xFF6B7280);
-      } 
-      else if (slotData != null) {
+        color = const Color(0xFF9CA3AF);
+      } else if (slotData != null) {
         status = slotData['status']?.toString() ?? 'free';
-        
         switch (status) {
           case 'pending':
             displayStatus = 'Pending';
@@ -156,6 +120,10 @@ class _RoomListState extends State<RoomList> {
             color = const Color(0xFF26A65B);
             break;
         }
+      } else {
+        status = 'free';
+        displayStatus = 'Available';
+        color = const Color(0xFF26A65B);
       }
 
       timeSlots.add(TimeSlot(
@@ -170,23 +138,6 @@ class _RoomListState extends State<RoomList> {
     return timeSlots;
   }
 
-  void _showErrorDialog(String error) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Error'),
-        content: Text(error),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -198,15 +149,8 @@ class _RoomListState extends State<RoomList> {
     }
 
     final filteredRooms = availableRooms.where((room) {
-      bool matchesTab;
-      if (selectedTab == "All") {
-        matchesTab = true;
-      } else {
-        matchesTab = room.category == selectedTab;
-      }
-      
+      bool matchesTab = selectedTab == "All" ? true : room.category == selectedTab;
       final matchesSearch = room.name.toLowerCase().contains(searchQuery.toLowerCase());
-      
       return matchesTab && matchesSearch;
     }).toList();
 
@@ -465,10 +409,11 @@ class _RoomListState extends State<RoomList> {
   }
 
   Widget _buildRoomCard(BookingRoom room) {
-    final availableSlots = room.timeSlots.where((slot) => 
-        slot.status == 'free' && slot.displayStatus == 'Available').length;
+    final availableSlots = room.timeSlots.isNotEmpty 
+        ? room.timeSlots.where((slot) => slot.status == 'free').length
+        : 0;
     
-    final canBook = !hasBookedToday && availableSlots > 0 && !room.isDisabled;
+    final canViewTimeSlots = !room.isDisabled;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -550,9 +495,11 @@ class _RoomListState extends State<RoomList> {
                   Text(
                     hasBookedToday 
                       ? 'Booking submitted - Pending approval'
-                      : '$availableSlots of ${allTimeSlots.length} time slots available',
+                      : room.timeSlots.isNotEmpty 
+                          ? '$availableSlots of ${allTimeSlots.length} time slots available'
+                          : 'Loading time slots...',
                     style: TextStyle(
-                      color: hasBookedToday ? Colors.orange : (canBook ? Colors.green : Colors.red),
+                      color: hasBookedToday ? Colors.orange : (availableSlots > 0 ? Colors.green : Colors.orange),
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
@@ -561,48 +508,37 @@ class _RoomListState extends State<RoomList> {
               ),
             ),
             
-            if (hasBookedToday)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
+            ElevatedButton(
+              onPressed: canViewTimeSlots ? () => _showTimeSlotSelection(context, room) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: hasBookedToday 
+                  ? Colors.grey
+                  : (canViewTimeSlots ? const Color(0xFF2C5473) : Colors.grey),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Booked',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              )
-            else
-              ElevatedButton(
-                onPressed: canBook ? () => _showTimeSlotSelection(context, room) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: canBook ? const Color(0xFF2C5473) : Colors.grey,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                child: Text(
-                  availableSlots > 0 ? 'Book Now' : 'Full',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: Text(
+                hasBookedToday ? 'View Only' : 'View Slots',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showTimeSlotSelection(BuildContext context, BookingRoom room) {
+  void _showTimeSlotSelection(BuildContext context, BookingRoom room) async {
+    if (room.timeSlots.isEmpty) {
+      await _loadTimeSlotsForRoom(room);
+    }
+
     final allSlots = room.timeSlots;
 
     showModalBottomSheet(
@@ -649,6 +585,31 @@ class _RoomListState extends State<RoomList> {
                 ],
               ),
             ),
+
+            if (hasBookedToday)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3CD),
+                  border: Border.all(color: const Color(0xFFFFC107)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.amber[700]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You have already booked a room for today. Viewing time slots only.',
+                        style: TextStyle(
+                          color: Colors.amber[800],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             Padding(
               padding: const EdgeInsets.all(16),
@@ -750,16 +711,26 @@ class _RoomListState extends State<RoomList> {
                     _buildStatusLegend(),
                     const SizedBox(height: 16),
                     
-                    if (allSlots.isEmpty)
-                      _buildNoSlotsAvailable()
-                    else
-                      Expanded(
-                        child: ListView(
-                          children: allSlots
-                              .map((slot) => _buildTimeSlotCard(slot, context, room))
-                              .toList(),
-                        ),
-                      ),
+                    Expanded(
+                      child: allSlots.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2C5473)),
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text('Loading time slots...'),
+                                ],
+                              ),
+                            )
+                          : ListView(
+                              children: allSlots
+                                  .map((slot) => _buildTimeSlotCard(slot, context, room))
+                                  .toList(),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -785,6 +756,7 @@ class _RoomListState extends State<RoomList> {
           _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
           _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
           _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
+          _buildLegendItem(const Color(0xFF9CA3AF), 'Time Passed'),
         ],
       ),
     );
@@ -810,28 +782,6 @@ class _RoomListState extends State<RoomList> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildNoSlotsAvailable() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        children: [
-          Icon(Icons.schedule, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 12),
-          const Text(
-            "No time slots available",
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "All time slots are either booked, pending, or have passed for today",
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 
@@ -867,7 +817,7 @@ class _RoomListState extends State<RoomList> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: canBook ? Colors.black87 : Colors.grey,
+            color: slot.status == 'free' ? Colors.black87 : Colors.grey,
           ),
         ),
         subtitle: Text(
@@ -902,7 +852,7 @@ class _RoomListState extends State<RoomList> {
                   border: Border.all(color: slot.color),
                 ),
                 child: Text(
-                  slot.displayStatus,
+                  hasBookedToday && slot.status == 'free' ? 'Already Booked' : slot.displayStatus,
                   style: TextStyle(
                     color: slot.color,
                     fontSize: 12,
@@ -924,6 +874,8 @@ class _RoomListState extends State<RoomList> {
         return Icons.event_available;
       case 'disabled':
         return Icons.block;
+      case 'time_passed':
+        return Icons.access_time;
       default:
         return Icons.access_time;
     }
@@ -970,19 +922,9 @@ class _RoomListState extends State<RoomList> {
   void _confirmBooking(BuildContext context, TimeSlot slot, BookingRoom room) async {
     try {
       final studentId = await ApiService.getCurrentStudentId();
-      if (studentId == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Student ID not found'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
+      if (studentId == null) return;
 
       if (slot.status != 'free') {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This time slot is no longer available'),
@@ -992,17 +934,15 @@ class _RoomListState extends State<RoomList> {
         return;
       }
 
-      final result = await ApiService.createBooking(
+      await ApiService.createBooking(
         studentId: studentId,
         roomId: room.id,
         timeSlot: slot.time,
       );
       
-      if (!mounted) return;
       Navigator.pop(context);
       Navigator.pop(context);
 
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Successfully booked ${room.name} for ${slot.time}. Status: Pending Approval'),
@@ -1012,15 +952,12 @@ class _RoomListState extends State<RoomList> {
         ),
       );
 
-      if (!mounted) return;
       setState(() {
         hasBookedToday = true;
       });
       await _loadData();
 
     } catch (e) {
-      if (!mounted) return;
-      
       String errorMessage = 'Booking failed';
       if (e.toString().contains('already booked')) {
         errorMessage = 'You have already booked a room for today';
@@ -1030,10 +967,6 @@ class _RoomListState extends State<RoomList> {
       } else if (e.toString().contains('no longer available')) {
         errorMessage = 'This time slot was just taken. Please try another slot.';
         await _loadData();
-      } else if (e.toString().contains('Database error')) {
-        errorMessage = 'Server error. Please try again.';
-      } else {
-        errorMessage = e.toString();
       }
 
       ScaffoldMessenger.of(context).showSnackBar(

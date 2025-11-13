@@ -2,14 +2,7 @@ import 'package:flutter/material.dart';
 import '../api_service.dart';
 
 class DashboardLecturer extends StatefulWidget {
-  final VoidCallback onNavigateToAdmin;
-  final VoidCallback onNavigateToHistory;
-
-  const DashboardLecturer({
-    super.key,
-    required this.onNavigateToAdmin,
-    required this.onNavigateToHistory,
-  });
+  const DashboardLecturer({super.key});
 
   @override
   State<DashboardLecturer> createState() => _DashboardLecturerState();
@@ -27,9 +20,7 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
 
   Future<void> _loadDashboardStats() async {
     try {
-      // Use today-specific dashboard stats
       final stats = await ApiService.getTodayDashboardStats();
-      // Ensure we have valid numbers, default to 0 if null
       setState(() {
         dashboardStats = {
           'free_slots': stats['free_slots'] ?? 0,
@@ -42,8 +33,6 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error loading dashboard stats: $e');
-      // Fallback to default values
       setState(() {
         dashboardStats = {
           'free_slots': 0,
@@ -75,17 +64,13 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Statistics for ${_getFormattedDate()}',
+            'Today is ${_getFormattedDate()}',
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,
             ),
           ),
           const SizedBox(height: 20),
-          
-          // Quick Actions
-          _buildQuickActions(),
-          const SizedBox(height: 24),
           
           // Statistics Grid
           const Text(
@@ -139,78 +124,6 @@ class _DashboardLecturerState extends State<DashboardLecturer> {
                 ),
               ],
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2A3A),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: widget.onNavigateToAdmin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2C5473),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.rule, size: 20),
-                  label: const Text(
-                    'Manage Requests',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: widget.onNavigateToHistory,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE8EDF1),
-                    foregroundColor: const Color(0xFF2C5473),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.history, size: 20),
-                  label: const Text(
-                    'View History',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

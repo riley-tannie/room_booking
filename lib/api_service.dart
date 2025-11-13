@@ -91,24 +91,22 @@ class ApiService {
   
   // Get all rooms
   static Future<List<dynamic>> getAvailableRooms() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
-      print('Get rooms response status: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to load rooms: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get rooms error: $e');
-      rethrow;
+  try {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/rooms'),
+      headers: headers,
+    ).timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      // Return empty list instead of throwing error
+      return [];
     }
+  } catch (e) {
+    return [];
   }
+}
 
   // Get today's rooms for lecturer
   static Future<List<dynamic>> getTodayRooms() async {
