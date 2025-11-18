@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'home_staff.dart';
 import 'booking_history.dart';
 import 'profile.dart';
-import 'edit.dart';
-import 'data_store.dart';
+import 'staff_management.dart';
+import '../api_service.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -13,17 +13,47 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  int _currentIndex = 2; // Dashboard active tab
+  int _currentIndex = 2;
+  Map<String, dynamic> _stats = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardStats();
+  }
+
+  Future<void> _loadDashboardStats() async {
+    try {
+      final stats = await ApiService.getTodayDashboardStats();
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard stats: $e');
+      // Fallback to default stats
+      setState(() {
+        _stats = {
+          'free_slots': 0,
+          'pending_slots': 0,
+          'reserved_slots': 0,
+          'disabled_rooms': 0,
+          'pending_requests': 0,
+          'approved_today': 0,
+        };
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final stats = StaffDataStore.getDashboardStats();
-    
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
+          // Header
           Container(
             height: 110,
             decoration: const BoxDecoration(
@@ -34,7 +64,6 @@ class _DashboardState extends State<Dashboard> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Center text
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
@@ -47,8 +76,6 @@ class _DashboardState extends State<Dashboard> {
                       ),
                     ),
                   ),
-
-                  // Profile icon on the right
                   Positioned(
                     right: 18,
                     top: 15,
@@ -71,7 +98,7 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
 
-          // ---------- Content ----------
+          // Content
           Padding(
             padding: const EdgeInsets.only(top: 130),
             child: Column(
@@ -86,55 +113,73 @@ class _DashboardState extends State<Dashboard> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Expanded(
-                  child: GridView.count(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
-                    ),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1,
-                    children: [
-                      _buildStatusCard(
-                        Icons.pie_chart,
-                        'Available',
-                        stats['available'].toString(),
-                        const Color(0xFFB9EACF),
-                        const Color(0xFF26A65B),
+                _isLoading
+                    ? const Expanded(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : Expanded(
+                        child: GridView.count(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 10,
+                          ),
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 1,
+                          children: [
+                            _buildStatusCard(
+                              Icons.event_available,
+                              'Available Slots',
+                              _stats['free_slots']?.toString() ?? '0',
+                              const Color(0xFFB9EACF),
+                              const Color(0xFF26A65B),
+                            ),
+                            _buildStatusCard(
+                              Icons.pending_actions,
+                              'Pending Requests',
+                              _stats['pending_requests']?.toString() ?? '0',
+                              const Color(0xFFF6E1A6),
+                              const Color(0xFFD4A017),
+                            ),
+                            _buildStatusCard(
+                              Icons.book_online,
+                              'Reserved Slots',
+                              _stats['reserved_slots']?.toString() ?? '0',
+                              const Color(0xFFCCE5F8),
+                              const Color(0xFF428BCA),
+                            ),
+                            _buildStatusCard(
+                              Icons.visibility_off,
+                              'Disabled Rooms',
+                              _stats['disabled_rooms']?.toString() ?? '0',
+                              const Color(0xFFF8C1C1),
+                              const Color(0xFFD64541),
+                            ),
+                            _buildStatusCard(
+                              Icons.pending,
+                              'Pending Slots',
+                              _stats['pending_slots']?.toString() ?? '0',
+                              const Color(0xFFFFE0B2),
+                              const Color(0xFFF57C00),
+                            ),
+                            _buildStatusCard(
+                              Icons.verified,
+                              'Approved Today',
+                              _stats['approved_today']?.toString() ?? '0',
+                              const Color(0xFFC8E6C9),
+                              const Color(0xFF388E3C),
+                            ),
+                          ],
+                        ),
                       ),
-                      _buildStatusCard(
-                        Icons.bar_chart,
-                        'Pending',
-                        stats['pending'].toString(),
-                        const Color(0xFFF6E1A6),
-                        const Color(0xFFD4A017),
-                      ),
-                      _buildStatusCard(
-                        Icons.remove_circle_outline,
-                        'Reserved',
-                        stats['reserved'].toString(),
-                        const Color(0xFFCCE5F8),
-                        const Color(0xFF428BCA),
-                      ),
-                      _buildStatusCard(
-                        Icons.visibility_off,
-                        'Disabled',
-                        stats['disabled'].toString(),
-                        const Color(0xFFF8C1C1),
-                        const Color(0xFFD64541),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
         ],
       ),
 
-      // ---------- Floating Bottom Navigation ----------
+      // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,
@@ -180,7 +225,7 @@ class _DashboardState extends State<Dashboard> {
               case 1:
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
+                  MaterialPageRoute(builder: (_) => StaffManagementPage()),
                 );
                 break;
               case 2:
@@ -218,7 +263,6 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  // ---------- Status Cards ----------
   Widget _buildStatusCard(
     IconData icon,
     String title,
@@ -241,7 +285,7 @@ class _DashboardState extends State<Dashboard> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: Colors.black87),
+          Icon(icon, size: 32, color: textColor),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -251,16 +295,21 @@ class _DashboardState extends State<Dashboard> {
             ),
             child: Text(
               title,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             count,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: textColor,
             ),
           ),
         ],

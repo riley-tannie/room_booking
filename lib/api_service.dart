@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // For iOS simulator, use localhost
   static const String baseUrl = 'http://localhost:3000';
   
   static final Map<String, String> headers = {
@@ -17,11 +16,8 @@ class ApiService {
         Uri.parse('$baseUrl/api/health'),
         headers: headers,
       ).timeout(const Duration(seconds: 10));
-      
-      print('Connection test status: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
-      print('Connection test failed: $e');
       return false;
     }
   }
@@ -35,9 +31,6 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 15));
       
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         final user = jsonDecode(response.body);
         final storage = await SharedPreferences.getInstance();
@@ -49,7 +42,6 @@ class ApiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('Login error: $e');
       rethrow;
     }
   }
@@ -73,9 +65,6 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 15));
       
-      print('Register response status: ${response.statusCode}');
-      print('Register response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -84,29 +73,27 @@ class ApiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('Registration error: $e');
       rethrow;
     }
   }
   
   // Get all rooms
   static Future<List<dynamic>> getAvailableRooms() async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/rooms'),
-      headers: headers,
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/rooms'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      // Return empty list instead of throwing error
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return [];
+      }
+    } catch (e) {
       return [];
     }
-  } catch (e) {
-    return [];
   }
-}
 
   // Get today's rooms for lecturer
   static Future<List<dynamic>> getTodayRooms() async {
@@ -116,15 +103,12 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 10));
       
-      print('Get today rooms response status: ${response.statusCode}');
-      
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load today\'s rooms: ${response.statusCode}');
+        throw Exception('Failed to load today\'s rooms');
       }
     } catch (e) {
-      print('Get today rooms error: $e');
       rethrow;
     }
   }
@@ -140,10 +124,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load time slots: ${response.statusCode}');
+        throw Exception('Failed to load time slots');
       }
     } catch (e) {
-      print('Get time slots error: $e');
       rethrow;
     }
   }
@@ -160,10 +143,9 @@ class ApiService {
         final data = jsonDecode(response.body);
         return data['time_slots'] ?? [];
       } else {
-        throw Exception('Failed to load today\'s time slots: ${response.statusCode}');
+        throw Exception('Failed to load today\'s time slots');
       }
     } catch (e) {
-      print('Get today time slots error: $e');
       rethrow;
     }
   }
@@ -175,11 +157,6 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      print('=== BOOKING REQUEST ===');
-      print('Student ID: $studentId');
-      print('Room ID: $roomId');
-      print('Time Slot: $timeSlot');
-      
       final response = await http.post(
         Uri.parse('$baseUrl/api/bookings'),
         body: jsonEncode({
@@ -190,25 +167,18 @@ class ApiService {
         headers: headers,
       ).timeout(const Duration(seconds: 15));
       
-      print('Booking response status: ${response.statusCode}');
-      print('Booking response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
         try {
           final errorResponse = jsonDecode(response.body);
-          final errorMessage = errorResponse['error'] ?? 'Booking failed with status ${response.statusCode}';
+          final errorMessage = errorResponse['error'] ?? 'Booking failed';
           throw Exception(errorMessage);
         } catch (parseError) {
-          throw Exception('Booking failed: ${response.statusCode} - ${response.body}');
+          throw Exception('Booking failed: ${response.statusCode}');
         }
       }
     } catch (e) {
-      print('=== BOOKING ERROR ===');
-      print('Error type: ${e.runtimeType}');
-      print('Error message: $e');
-      print('=== END BOOKING ERROR ===');
       rethrow;
     }
   }
@@ -224,10 +194,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load bookings: ${response.statusCode}');
+        throw Exception('Failed to load bookings');
       }
     } catch (e) {
-      print('Get student bookings error: $e');
       rethrow;
     }
   }
@@ -243,10 +212,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load today\'s bookings: ${response.statusCode}');
+        throw Exception('Failed to load today\'s bookings');
       }
     } catch (e) {
-      print('Get today bookings error: $e');
       rethrow;
     }
   }
@@ -265,7 +233,6 @@ class ApiService {
       }
       return false;
     } catch (e) {
-      print('Has booked today check error: $e');
       return false;
     }
   }
@@ -281,10 +248,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load all bookings: ${response.statusCode}');
+        throw Exception('Failed to load all bookings');
       }
     } catch (e) {
-      print('Get all bookings error: $e');
       rethrow;
     }
   }
@@ -300,10 +266,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load today\'s pending requests: ${response.statusCode}');
+        throw Exception('Failed to load today\'s pending requests');
       }
     } catch (e) {
-      print('Get today pending requests error: $e');
       rethrow;
     }
   }
@@ -319,10 +284,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load lecturer history: ${response.statusCode}');
+        throw Exception('Failed to load lecturer history');
       }
     } catch (e) {
-      print('Get lecturer history error: $e');
       rethrow;
     }
   }
@@ -351,7 +315,6 @@ class ApiService {
         throw Exception(errorMessage);
       }
     } catch (e) {
-      print('Update booking status error: $e');
       rethrow;
     }
   }
@@ -367,10 +330,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load dashboard stats: ${response.statusCode}');
+        throw Exception('Failed to load dashboard stats');
       }
     } catch (e) {
-      print('Get dashboard stats error: $e');
       rethrow;
     }
   }
@@ -386,10 +348,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load today\'s dashboard stats: ${response.statusCode}');
+        throw Exception('Failed to load today\'s dashboard stats');
       }
     } catch (e) {
-      print('Get today dashboard stats error: $e');
       rethrow;
     }
   }
@@ -405,10 +366,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load lecturer dashboard stats: ${response.statusCode}');
+        throw Exception('Failed to load lecturer dashboard stats');
       }
     } catch (e) {
-      print('Get lecturer dashboard stats error: $e');
       rethrow;
     }
   }
@@ -419,7 +379,6 @@ class ApiService {
       final storage = await SharedPreferences.getInstance();
       await storage.remove('user');
     } catch (e) {
-      print('Logout error: $e');
       rethrow;
     }
   }
@@ -434,7 +393,6 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('Get current user error: $e');
       return null;
     }
   }
@@ -445,7 +403,6 @@ class ApiService {
       final user = await getCurrentUser();
       return user?['uid']?.toString();
     } catch (e) {
-      print('Get current student ID error: $e');
       return null;
     }
   }
@@ -456,7 +413,6 @@ class ApiService {
       final user = await getCurrentUser();
       return user?['fullName']?.toString();
     } catch (e) {
-      print('Get current student name error: $e');
       return null;
     }
   }
@@ -467,7 +423,6 @@ class ApiService {
       final user = await getCurrentUser();
       return user?['role']?.toString();
     } catch (e) {
-      print('Get current user role error: $e');
       return null;
     }
   }
@@ -483,10 +438,9 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to load requests: ${response.statusCode}');
+        throw Exception('Failed to load requests');
       }
     } catch (e) {
-      print('Get student requests error: $e');
       rethrow;
     }
   }
@@ -497,7 +451,7 @@ class ApiService {
       final storage = await SharedPreferences.getInstance();
       await storage.clear();
     } catch (e) {
-      print('Clear data error: $e');
+      // Silent fail for clear data
     }
   }
 
@@ -517,7 +471,6 @@ class ApiService {
       final user = await getCurrentUser();
       return user?['userType']?.toString();
     } catch (e) {
-      print('Get user type error: $e');
       return null;
     }
   }
@@ -528,8 +481,174 @@ class ApiService {
       final user = await getCurrentUser();
       return user?['uid']?.toString();
     } catch (e) {
-      print('Get current lecturer ID error: $e');
       return null;
+    }
+  }
+
+  // --- STAFF MANAGEMENT METHODS ---
+
+  // Create new room
+  static Future<Map<String, dynamic>> createRoom({
+    required String name,
+    required String category,
+    required String location,
+    required String description,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/rooms'),
+        body: jsonEncode({
+          'name': name,
+          'category': category,
+          'location': location,
+          'description': description,
+        }),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Room creation failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Update room
+  static Future<Map<String, dynamic>> updateRoom({
+    required String roomId,
+    required String name,
+    required String location,
+    required String description,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/rooms/$roomId'),
+        body: jsonEncode({
+          'name': name,
+          'location': location,
+          'description': description,
+        }),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Room update failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Disable room
+  static Future<Map<String, dynamic>> disableRoom(String roomId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/rooms/$roomId/disable'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Room disable failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Enable room
+  static Future<Map<String, dynamic>> enableRoom(String roomId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/rooms/$roomId/enable'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Room enable failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Disable time slot
+  static Future<Map<String, dynamic>> disableTimeSlot({
+    required String roomId,
+    required String timeSlot,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/disable'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Time slot disable failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Enable time slot
+  static Future<Map<String, dynamic>> enableTimeSlot({
+    required String roomId,
+    required String timeSlot,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/enable'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        final errorMessage = errorResponse['error'] ?? 'Time slot enable failed';
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get rooms with availability
+  static Future<List<dynamic>> getRoomsWithAvailability() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/rooms/availability'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
     }
   }
 }

@@ -7,7 +7,7 @@ class BookingRoom {
   final String location;
   final String imageUrl;
   final String description;
-  final bool isDisabled;
+  bool isDisabled;
   List<TimeSlot> timeSlots;
 
   BookingRoom({
@@ -17,8 +17,8 @@ class BookingRoom {
     required this.location,
     required this.imageUrl,
     required this.description,
-    required this.isDisabled,
     required this.timeSlots,
+    this.isDisabled = false,
   });
 
   factory BookingRoom.fromJson(Map<String, dynamic> json) {
@@ -29,8 +29,39 @@ class BookingRoom {
       location: json['location'] ?? '',
       imageUrl: json['image_url'] ?? 'assets/images/default_room.jpg',
       description: json['description'] ?? '',
-      isDisabled: (json['is_disabled'] ?? json['disabled'] ?? 0) == 1,
+      isDisabled: (json['is_disabled'] ?? 0) == 1,
       timeSlots: [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'category': category,
+      'location': location,
+      'image_url': imageUrl,
+      'description': description,
+      'is_disabled': isDisabled ? 1 : 0,
+    };
+  }
+
+  BookingRoom copyWith({
+    String? name,
+    String? location,
+    String? description,
+    bool? isDisabled,
+    List<TimeSlot>? timeSlots,
+  }) {
+    return BookingRoom(
+      id: id,
+      name: name ?? this.name,
+      category: category,
+      location: location ?? this.location,
+      imageUrl: imageUrl,
+      description: description ?? this.description,
+      timeSlots: timeSlots ?? this.timeSlots,
+      isDisabled: isDisabled ?? this.isDisabled,
     );
   }
 }
@@ -42,6 +73,8 @@ class TimeSlot {
   final String displayStatus;
   final Color color;
   final String? studentName;
+  final String? studentId;
+  final String? bookingId;
 
   TimeSlot({
     required this.id,
@@ -50,6 +83,8 @@ class TimeSlot {
     required this.displayStatus,
     required this.color,
     this.studentName,
+    this.studentId,
+    this.bookingId,
   });
 
   factory TimeSlot.fromJson(Map<String, dynamic> json) {
@@ -84,7 +119,18 @@ class TimeSlot {
       displayStatus: displayStatus,
       color: color,
       studentName: json['student_name'],
+      studentId: json['student_id'],
+      bookingId: json['booking_id'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'time_slot': time,
+      'status': status,
+      'student_id': studentId,
+      'booking_id': bookingId,
+    };
   }
 }
 
@@ -120,17 +166,13 @@ class UserBooking {
   });
 
   factory UserBooking.fromJson(Map<String, dynamic> json) {
-    // Parse the date and convert to local timezone
     DateTime bookingDate;
     try {
-      // Parse as UTC and convert to local time
       bookingDate = DateTime.parse(json['booking_date'] ?? DateTime.now().toString()).toLocal();
     } catch (e) {
-      // Fallback if parsing fails
       bookingDate = DateTime.now().toLocal();
     }
 
-    // Parse bookedAt with timezone handling
     DateTime bookedAt;
     try {
       bookedAt = DateTime.parse(json['booked_at'] ?? json['created_at'] ?? DateTime.now().toString()).toLocal();
@@ -156,114 +198,9 @@ class UserBooking {
   }
 }
 
-// Add these missing classes for lecturer functionality
-class Request {
-  final String requestId;
-  final String roomName;
-  final String studentName;
-  final String date;
-  final String timeSlot;
-  final String roomId;
-  final String studentId;
-
-  Request({
-    required this.requestId,
-    required this.roomName,
-    required this.studentName,
-    required this.date,
-    required this.timeSlot,
-    required this.roomId,
-    required this.studentId,
-  });
-
-  factory Request.fromJson(Map<String, dynamic> json) {
-    return Request(
-      requestId: json['id']?.toString() ?? '',
-      roomName: json['room_name'] ?? '',
-      studentName: json['student_name'] ?? '',
-      date: json['booking_date'] ?? '',
-      timeSlot: json['time_slot'] ?? '',
-      roomId: json['room_id'] ?? '',
-      studentId: json['student_id'] ?? '',
-    );
-  }
-}
-
-class HistoryEntry {
-  final String roomName;
-  final String studentName;
-  final bool isApproved;
-  final DateTime actionTime;
-
-  HistoryEntry({
-    required this.roomName,
-    required this.studentName,
-    required this.isApproved,
-    required this.actionTime,
-  });
-
-  factory HistoryEntry.fromJson(Map<String, dynamic> json) {
-    return HistoryEntry(
-      roomName: json['room_name'] ?? '',
-      studentName: json['student_name'] ?? '',
-      isApproved: json['status']?.toString().toLowerCase() == 'approved',
-      actionTime: DateTime.parse(json['approved_at'] ?? DateTime.now().toString()).toLocal(),
-    );
-  }
-}
-
-class Room {
-  final String name;
-  final String subTitle;
-  final String group;
-  final Color statusColor;
-  final String statusText;
-
-  Room({
-    required this.name,
-    required this.subTitle,
-    required this.group,
-    required this.statusColor,
-    required this.statusText,
-  });
-
-  factory Room.fromJson(Map<String, dynamic> json) {
-    return Room(
-      name: json['name'] ?? '',
-      subTitle: json['location'] ?? '',
-      group: json['category'] ?? 'General',
-      statusColor: const Color(0xFF26A65B), // Default green
-      statusText: 'Available', // Default status
-    );
-  }
-}
-
 // DataStore class to manage the data
 class DataStore {
-  static List<Request> pendingRequests = [];
-  static List<HistoryEntry> historyRecords = [];
-  static List<Room> rooms = [];
   static List<BookingRoom> bookingRooms = [];
-
-  // Method to add history entry
-  static void addHistoryEntry(Request request, bool approved) {
-    historyRecords.insert(0, HistoryEntry(
-      roomName: request.roomName,
-      studentName: request.studentName,
-      isApproved: approved,
-      actionTime: DateTime.now(),
-    ));
-  }
-
-  // Method to load pending requests from API
-  static Future<void> loadPendingRequests() async {
-    // This will be implemented with API calls
-  }
-
-  // Method to load history from API
-  static Future<void> loadHistory() async {
-    // This will be implemented with API calls
-  }
 
   // Method to load rooms from API
   static Future<void> loadRooms() async {

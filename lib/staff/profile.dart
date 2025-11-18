@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/signin.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../signin.dart';
+import '../api_service.dart';
 
 class ProfilePage extends StatelessWidget {
   @override
@@ -9,7 +9,7 @@ class ProfilePage extends StatelessWidget {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
+          // Header
           Container(
             height: 150,
             decoration: const BoxDecoration(
@@ -49,7 +49,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
 
-          // ---------- Body ----------
+          // Body
           Padding(
             padding: const EdgeInsets.only(top: 160),
             child: SingleChildScrollView(
@@ -69,49 +69,68 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildProfileHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: ApiService.getCurrentUser(),
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        final userName = user?['fullName'] ?? 'Staff User';
+        final userRole = user?['role'] ?? 'staff';
+        final userEmail = user?['email'] ?? 'staff@mfu.th';
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: const Color(0xFFE8EDF1),
-            child: Icon(
-              Icons.person,
-              size: 40,
-              color: const Color(0xFF2C5473),
-            ),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: const Color(0xFFE8EDF1),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: const Color(0xFF2C5473),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                userName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userRole.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userEmail,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Staff',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '320 points',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -131,7 +150,7 @@ class ProfilePage extends StatelessWidget {
       child: Column(
         children: [
           _buildMenuItem('Personal Info', Icons.person_outline),
-          _buildMenuItem('Setting', Icons.settings),
+          _buildMenuItem('Settings', Icons.settings),
           _buildMenuItem('Support', Icons.help_outline),
           _buildMenuItem('Privacy & Policy', Icons.privacy_tip_outlined),
           _buildMenuItem('Sign out', Icons.logout, isSignOut: true, context: context),
@@ -237,11 +256,8 @@ class ProfilePage extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          // Clear user data from SharedPreferences
-                          final storage = await SharedPreferences.getInstance();
-                          await storage.remove('user');
+                          await ApiService.logout();
                           
-                          // Navigate to login screen and clear all routes
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (_) => LoginScreen()),

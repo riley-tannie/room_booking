@@ -852,7 +852,7 @@ class _RoomListState extends State<RoomList> {
                   border: Border.all(color: slot.color),
                 ),
                 child: Text(
-                  hasBookedToday && slot.status == 'free' ? 'Already Booked' : slot.displayStatus,
+                  hasBookedToday && slot.status == 'free' ? 'Booked' : slot.displayStatus,
                   style: TextStyle(
                     color: slot.color,
                     fontSize: 12,

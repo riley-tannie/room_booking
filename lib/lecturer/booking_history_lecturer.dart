@@ -23,13 +23,17 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
       final user = await ApiService.getCurrentUser();
       if (user != null) {
         final allBookings = await ApiService.getAllBookings();
-        // Filter for today's approvals by this lecturer only
+        // Filter for approvals by this lecturer and sort with today's first
         setState(() {
           historyEntries = allBookings
-              .where((booking) => 
-                  booking['approved_by'] == user['uid'] &&
-                  _isToday(booking['approved_at']))
-              .toList();
+              .where((booking) => booking['approved_by'] == user['uid'])
+              .toList()
+            ..sort((a, b) {
+              // Sort by approval date, most recent first (today's first)
+              final aDate = DateTime.parse(a['approved_at'] ?? '');
+              final bDate = DateTime.parse(b['approved_at'] ?? '');
+              return bDate.compareTo(aDate); // Descending order
+            });
           isLoading = false;
         });
       }
@@ -49,6 +53,19 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
       return date.year == today.year &&
              date.month == today.month &&
              date.day == today.day;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  bool _isYesterday(String? dateString) {
+    if (dateString == null) return false;
+    try {
+      final date = DateTime.parse(dateString).toLocal();
+      final yesterday = DateTime.now().toLocal().subtract(const Duration(days: 1));
+      return date.year == yesterday.year &&
+             date.month == yesterday.month &&
+             date.day == yesterday.day;
     } catch (e) {
       return false;
     }
@@ -78,6 +95,26 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
     }
   }
 
+  String _getRelativeDate(String? dateString) {
+    if (dateString == null) return 'Unknown date';
+    
+    if (_isToday(dateString)) return 'Today';
+    if (_isYesterday(dateString)) return 'Yesterday';
+    
+    final date = DateTime.parse(dateString).toLocal();
+    final now = DateTime.now().toLocal();
+    final difference = now.difference(date).inDays;
+    
+    if (difference < 7) {
+      return '${difference} day${difference > 1 ? 's' : ''} ago';
+    } else if (difference < 30) {
+      final weeks = (difference / 7).floor();
+      return '${weeks} week${weeks > 1 ? 's' : ''} ago';
+    } else {
+      return _formatDate(dateString);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -86,7 +123,7 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Today's Approval History",
+            "Approval History",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -108,9 +145,55 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
           else if (historyEntries.isEmpty)
             _buildEmptyState()
           else
-            ...historyEntries.map((entry) => _buildHistoryCard(context, entry)),
+            _buildHistoryList(),
         ],
       ),
+    );
+  }
+
+  Widget _buildHistoryList() {
+    // Group entries by date
+    final Map<String, List<dynamic>> groupedEntries = {};
+    
+    for (final entry in historyEntries) {
+      final date = DateTime.parse(entry['approved_at'] ?? '').toLocal();
+      final dateKey = '${date.year}-${date.month}-${date.day}';
+      
+      if (!groupedEntries.containsKey(dateKey)) {
+        groupedEntries[dateKey] = [];
+      }
+      groupedEntries[dateKey]!.add(entry);
+    }
+    
+    // Convert to list and sort by date (most recent first)
+    final sortedDates = groupedEntries.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+    
+    return Column(
+      children: sortedDates.map((dateKey) {
+        final entries = groupedEntries[dateKey]!;
+        final firstEntry = entries.first;
+        final dateString = firstEntry['approved_at'];
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                _getRelativeDate(dateString),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E2A3A),
+                ),
+              ),
+            ),
+            ...entries.map((entry) => _buildHistoryCard(context, entry)),
+            const SizedBox(height: 16),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -145,7 +228,7 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
           ),
           const SizedBox(height: 20),
           const Text(
-            'No Actions Today',
+            'No Approval History',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -156,7 +239,7 @@ class _BookingHistoryLecturerState extends State<BookingHistoryLecturer> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
-              'Your approval decisions for today will appear here.',
+              'Your approval decisions will appear here.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.grey[600],
