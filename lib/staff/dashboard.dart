@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'home_staff.dart';
 import 'booking_history.dart';
 import 'profile.dart';
-import 'edit.dart';
-import 'data_store.dart';
+import 'staff_management.dart';
+import '../api_service.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -13,17 +13,47 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  int _currentIndex = 2; // Dashboard active tab
+  int _currentIndex = 2;
+  Map<String, dynamic> _stats = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardStats();
+  }
+
+  Future<void> _loadDashboardStats() async {
+    try {
+      final stats = await ApiService.getTodayDashboardStats();
+      setState(() {
+        _stats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard stats: $e');
+      // Fallback to default stats
+      setState(() {
+        _stats = {
+          'free_slots': 0,
+          'pending_slots': 0,
+          'reserved_slots': 0,
+          'disabled_rooms': 0,
+          'pending_requests': 0,
+          'approved_today': 0,
+        };
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final stats = StaffDataStore.getDashboardStats();
-    
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
-      body: Stack(
+      body: Column(
         children: [
-          // ---------- Header ----------
+          // Header - Keeping the original app bar
           Container(
             height: 110,
             decoration: const BoxDecoration(
@@ -34,7 +64,6 @@ class _DashboardState extends State<Dashboard> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Center text
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
@@ -47,8 +76,6 @@ class _DashboardState extends State<Dashboard> {
                       ),
                     ),
                   ),
-
-                  // Profile icon on the right
                   Positioned(
                     right: 18,
                     top: 15,
@@ -71,70 +98,98 @@ class _DashboardState extends State<Dashboard> {
             ),
           ),
 
-          // ---------- Content ----------
-          Padding(
-            padding: const EdgeInsets.only(top: 130),
-            child: Column(
-              children: [
-                const Text(
-                  'All Status of Rooms Today',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E2A3A),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: GridView.count(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 10,
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Today's Overview",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E2A3A),
                     ),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1,
-                    children: [
-                      _buildStatusCard(
-                        Icons.pie_chart,
-                        'Available',
-                        stats['available'].toString(),
-                        const Color(0xFFB9EACF),
-                        const Color(0xFF26A65B),
-                      ),
-                      _buildStatusCard(
-                        Icons.bar_chart,
-                        'Pending',
-                        stats['pending'].toString(),
-                        const Color(0xFFF6E1A6),
-                        const Color(0xFFD4A017),
-                      ),
-                      _buildStatusCard(
-                        Icons.remove_circle_outline,
-                        'Reserved',
-                        stats['reserved'].toString(),
-                        const Color(0xFFCCE5F8),
-                        const Color(0xFF428BCA),
-                      ),
-                      _buildStatusCard(
-                        Icons.visibility_off,
-                        'Disabled',
-                        stats['disabled'].toString(),
-                        const Color(0xFFF8C1C1),
-                        const Color(0xFFD64541),
-                      ),
-                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Today is ${_getFormattedDate()}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Statistics Grid
+                  const Text(
+                    'Room Availability',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E2A3A),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  if (_isLoading)
+                    _buildLoadingGrid()
+                  else
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                      children: [
+                        _buildStatusCard(
+                          'Free Slots', 
+                          _stats['free_slots']?.toString() ?? '0', 
+                          const Color(0xFF26A65B), 
+                          Icons.check_circle_outline,
+                          'Available for booking'
+                        ),
+                        _buildStatusCard(
+                          'Pending Requests', 
+                          _stats['pending_requests']?.toString() ?? '0', 
+                          const Color(0xFFF59E0B), 
+                          Icons.pending_actions,
+                          'Awaiting approval'
+                        ),
+                        _buildStatusCard(
+                          'Reserved Slots', 
+                          _stats['reserved_slots']?.toString() ?? '0', 
+                          const Color(0xFF428BCA), 
+                          Icons.book_online,
+                          'Confirmed bookings'
+                        ),
+                        _buildStatusCard(
+                          'Disabled Rooms', 
+                          _stats['disabled_rooms']?.toString() ?? '0', 
+                          const Color(0xFF6B7280), 
+                          Icons.block,
+                          'Unavailable rooms'
+                        ),
+                        _buildStatusCard(
+                          'Approved Today', 
+                          _stats['approved_today']?.toString() ?? '0', 
+                          const Color(0xFF388E3C), 
+                          Icons.verified,
+                          'Approved bookings'
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ],
       ),
 
-      // ---------- Floating Bottom Navigation ----------
+      // Bottom Navigation - Keeping the original bottom navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,
@@ -180,7 +235,7 @@ class _DashboardState extends State<Dashboard> {
               case 1:
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
+                  MaterialPageRoute(builder: (_) => StaffManagementPage()),
                 );
                 break;
               case 2:
@@ -218,17 +273,28 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  // ---------- Status Cards ----------
-  Widget _buildStatusCard(
-    IconData icon,
-    String title,
-    String count,
-    Color bgColor,
-    Color textColor,
-  ) {
+  Widget _buildLoadingGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.2,
+      children: [
+        _buildLoadingCard(),
+        _buildLoadingCard(),
+        _buildLoadingCard(),
+        _buildLoadingCard(),
+        _buildLoadingCard(),
+      ],
+    );
+  }
+
+  Widget _buildLoadingCard() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F8FF),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -238,33 +304,73 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 32, color: Colors.black87),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              title,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            count,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+      child: const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(String title, String count, Color color, IconData icon, String subtitle) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 24, color: color),
+                const Spacer(),
+                Text(
+                  count,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  String _getFormattedDate() {
+    final now = DateTime.now();
+    return '${now.day}/${now.month}/${now.year}';
   }
 }

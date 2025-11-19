@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'dashboard.dart';
-import 'booking_history.dart';
-import 'profile.dart';
-import 'room_detail.dart';
-import 'edit.dart';
-import 'data_store.dart';
+import 'package:room_booking/staff/dashboard.dart';
+import 'package:room_booking/staff/booking_history.dart';
+import 'package:room_booking/staff/profile.dart';
+import 'package:room_booking/staff/room_detail.dart';
+import 'package:room_booking/staff/staff_management.dart';
+import 'package:room_booking/data_store.dart';
+import 'package:room_booking/api_service.dart';
 
 class HomeStaff extends StatefulWidget {
   @override
@@ -12,25 +13,93 @@ class HomeStaff extends StatefulWidget {
 }
 
 class _HomeStaffState extends State<HomeStaff> {
-  int _currentIndex = 0; // Room List is first
+  int _currentIndex = 0;
+  List<BookingRoom> _rooms = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+  }
+
+  Future<void> _loadRooms() async {
+  try {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Single API call to get all rooms with their slots data
+    final roomsData = await ApiService.getAvailableRooms();
+    
+    if (!mounted) return;
+    
+    setState(() {
+      _rooms = roomsData.map((roomData) => BookingRoom.fromJson(roomData)).toList();
+      _isLoading = false;
+    });
+  } catch (e) {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
+  Map<String, List<BookingRoom>> _groupRoomsByCategory(List<BookingRoom> rooms) {
+    final Map<String, List<BookingRoom>> groupedRooms = {};
+    
+    for (var room in rooms) {
+      final category = room.category;
+      groupedRooms.putIfAbsent(category, () => []).add(room);
+    }
+    return groupedRooms;
+  }
+
+  String _getRoomStatus(int freeSlots, int pendingSlots, int reservedSlots) {
+    if (freeSlots > 0) return 'Available';
+    if (pendingSlots > 0) return 'Pending Approval';
+    if (reservedSlots > 0) return 'Reserved';
+    return 'No Slots';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Available':
+        return const Color(0xFF26A65B);
+      case 'Pending Approval':
+        return const Color(0xFFF59E0B);
+      case 'Reserved':
+        return const Color(0xFF428BCA);
+      case 'No Slots':
+        return const Color(0xFF6B7280);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  String _getAvailabilityText(int freeSlots, int pendingSlots, int reservedSlots) {
+    final totalSlots = freeSlots + pendingSlots + reservedSlots;
+    if (totalSlots == 0) return 'No slots available';
+    
+    final parts = <String>[];
+    if (freeSlots > 0) parts.add('$freeSlots free');
+    if (pendingSlots > 0) parts.add('$pendingSlots pending');
+    if (reservedSlots > 0) parts.add('$reservedSlots reserved');
+    
+    return parts.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Get available rooms (not disabled)
-    final availableRooms = StaffDataStore.availableRooms.where((room) => !room.isDisabled).toList();
-    
-    // Group rooms by category
-    final multimediaRooms = availableRooms.where((room) => room.category == 'Multimedia Room').toList();
-    final libraryRooms = availableRooms.where((room) => room.category == 'Library').toList();
-    final studyRooms = availableRooms.where((room) => room.category == 'Study Room').toList();
-    final lectureHalls = availableRooms.where((room) => room.category == 'Lecture Hall').toList();
-    final conferenceRooms = availableRooms.where((room) => room.category == 'Conference Room').toList();
+    final groupedRooms = _groupRoomsByCategory(_rooms);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
+          // Header
           Container(
             height: 150,
             decoration: const BoxDecoration(
@@ -59,10 +128,7 @@ class _HomeStaffState extends State<HomeStaff> {
                     right: 8,
                     top: 4,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.person_outline,
-                        color: Colors.white,
-                      ),
+                      icon: const Icon(Icons.person_outline, color: Colors.white),
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -76,47 +142,19 @@ class _HomeStaffState extends State<HomeStaff> {
             ),
           ),
 
-          // ---------- Body ----------
+          // Body
           Padding(
             padding: const EdgeInsets.only(top: 160),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (multimediaRooms.isNotEmpty)
-                    _buildRoomSection('Multimedia Room', multimediaRooms),
-                  
-                  if (libraryRooms.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildRoomSection('Library', libraryRooms),
-                  ],
-                  
-                  if (studyRooms.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildRoomSection('Study Room', studyRooms),
-                  ],
-                  
-                  if (lectureHalls.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildRoomSection('Lecture Hall', lectureHalls),
-                  ],
-                  
-                  if (conferenceRooms.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildRoomSection('Conference Room', conferenceRooms),
-                  ],
-                  
-                  const SizedBox(height: 24),
-                  _buildReservedSection(),
-                ],
-              ),
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : groupedRooms.isEmpty
+                    ? _buildEmptyState()
+                    : _buildRoomList(groupedRooms),
           ),
         ],
       ),
 
-      // ---------- Floating Bottom Navigation ----------
+      // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,
@@ -159,7 +197,7 @@ class _HomeStaffState extends State<HomeStaff> {
               case 1:
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
+                  MaterialPageRoute(builder: (_) => StaffManagementPage()),
                 );
                 break;
               case 2:
@@ -200,50 +238,92 @@ class _HomeStaffState extends State<HomeStaff> {
     );
   }
 
-  Widget _buildRoomSection(String title, List<BookingRoom> rooms) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E2A3A),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.meeting_room_outlined,
+            size: 80,
+            color: Colors.grey[400],
           ),
-        ),
-        const SizedBox(height: 12),
-        ...rooms.map((room) => _buildRoomCard(room)),
-      ],
+          const SizedBox(height: 20),
+          const Text(
+            'No Rooms Available',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E2A3A),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'All rooms might be disabled or fully booked',
+            style: TextStyle(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _loadRooms,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2C5473),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Refresh Rooms'),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildReservedSection() {
-    // Get rooms with reserved/pending slots
-    final reservedRooms = StaffDataStore.availableRooms.where((room) {
-      return room.timeSlots.any((slot) => slot.status == 'reserved' || slot.status == 'pending');
-    }).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Reserved & Pending Rooms',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.orange,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...reservedRooms.map((room) => _buildReservedRoomCard(room)),
-      ],
+  Widget _buildRoomList(Map<String, List<BookingRoom>> groupedRooms) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...groupedRooms.keys.map((category) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      category,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E2A3A),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Room Cards - UPDATED WITH IMAGES
+                  ...groupedRooms[category]!.map((room) => _buildRoomCard(context, room)),
+                  const SizedBox(height: 24),
+                ],
+              )),
+        ],
+      ),
     );
   }
 
-  Widget _buildRoomCard(BookingRoom room) {
+  Widget _buildRoomCard(BuildContext context, BookingRoom room) {
+    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final pendingSlots = room.timeSlots.where((slot) => slot.status == 'pending').length;
+    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved').length;
+    final status = _getRoomStatus(freeSlots, pendingSlots, reservedSlots);
+    final statusColor = _getStatusColor(status);
+    final availabilityText = _getAvailabilityText(freeSlots, pendingSlots, reservedSlots);
+
+    // Check if image is network image or local asset
+    final bool isNetworkImage = room.imageUrl.startsWith('http');
+    
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -255,185 +335,145 @@ class _HomeStaffState extends State<HomeStaff> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Room Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                room.imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[200],
-                    child: const Icon(
-                      Icons.photo,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RoomDetailPage(room: room),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Room Image - UPDATED TO USE ACTUAL IMAGE
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFE8EDF1),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: isNetworkImage
+                        ? Image.network(
+                            room.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildRoomIcon(room.category);
+                            },
+                          )
+                        : Image.asset(
+                            room.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildRoomIcon(room.category);
+                            },
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                
+                // Room Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        room.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        room.location,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        availabilityText,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Status Badge
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        status,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Icon(
+                      Icons.chevron_right,
                       color: Colors.grey,
-                      size: 30,
+                      size: 16,
                     ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    room.location,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  _buildRoomStatus(room),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2C5473),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  ],
                 ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => RoomDetailPage(room: room)),
-                );
-              },
-              child: const Text(
-                'See details',
-                style: TextStyle(
-                  color: Colors.white,
-                ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReservedRoomCard(BookingRoom room) {
-    final reservedSlots = room.timeSlots.where((slot) => slot.status == 'reserved' || slot.status == 'pending').toList();
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Room Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                room.imageUrl,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey[200],
-                    child: const Icon(
-                      Icons.photo,
-                      color: Colors.grey,
-                      size: 30,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    room.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    room.location,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${reservedSlots.length} slot(s) ${reservedSlots.any((slot) => slot.status == 'reserved') ? 'Reserved' : 'Pending'}',
-                    style: const TextStyle(
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => RoomDetailPage(room: room)),
-                );
-              },
-              child: const Text(
-                'See details',
-                style: TextStyle(
-                  color: Color(0xFF2C5473),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  Widget _buildRoomStatus(BookingRoom room) {
-    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
-    final totalSlots = room.timeSlots.length;
-    
-    return Text(
-      '$freeSlots/$totalSlots slots available',
-      style: TextStyle(
-        color: freeSlots > 0 ? Colors.green : Colors.red,
-        fontWeight: FontWeight.w500,
+  // Keep this as fallback for when images fail to load
+  Widget _buildRoomIcon(String category) {
+    return Center(
+      child: Icon(
+        _getRoomIconData(category),
+        size: 30,
+        color: const Color(0xFF2C5473),
       ),
     );
+  }
+
+  IconData _getRoomIconData(String category) {
+    switch (category) {
+      case 'Study Room':
+        return Icons.school;
+      case 'Multimedia Room':
+        return Icons.video_library;
+      case 'Lecture Hall':
+        return Icons.people;
+      case 'Library':
+        return Icons.library_books;
+      case 'Conference Room':
+        return Icons.business_center;
+      default:
+        return Icons.meeting_room;
+    }
   }
 }

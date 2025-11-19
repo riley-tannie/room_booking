@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/staff/edit.dart';
 import 'home_staff.dart';
 import 'dashboard.dart';
+import 'profile.dart';
+import 'staff_management.dart';
 import 'room_detail.dart';
-import 'data_store.dart';
+import '../data_store.dart';
+import '../api_service.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -13,17 +15,40 @@ class BookingHistoryPage extends StatefulWidget {
 }
 
 class _BookingHistoryPageState extends State<BookingHistoryPage> {
-  int _currentIndex = 3; // History active
+  int _currentIndex = 3;
+  List<UserBooking> _bookings = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    try {
+      final bookingsData = await ApiService.getAllBookings();
+      final bookings = bookingsData.map((bookingData) => UserBooking.fromJson(bookingData)).toList();
+      
+      setState(() {
+        _bookings = bookings;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading bookings: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bookingHistory = StaffDataStore.allBookingsHistory;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
+          // Header
           Container(
             height: 110,
             decoration: const BoxDecoration(
@@ -48,31 +73,36 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
             ),
           ),
 
-          // ---------- Content ----------
+          // Content
           Padding(
             padding: const EdgeInsets.only(top: 130, left: 20, right: 20),
-            child: bookingHistory.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No booking history available',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _bookings.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No booking history available',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadBookings,
+                        child: ListView.builder(
+                          itemCount: _bookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = _bookings[index];
+                            return _buildHistoryItem(booking);
+                          },
+                        ),
                       ),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    child: Column(
-                      children: bookingHistory
-                          .map((booking) => _buildHistoryItem(booking))
-                          .toList(),
-                    ),
-                  ),
           ),
         ],
       ),
 
-      // ---------- Floating Bottom Navigation ----------
+      // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,
@@ -118,7 +148,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
               case 1:
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => EditRoomTypesPage()),
+                  MaterialPageRoute(builder: (_) => StaffManagementPage()),
                 );
                 break;
               case 2:
@@ -156,130 +186,116 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
     );
   }
 
-  // ---------- History Item Card ----------
   Widget _buildHistoryItem(UserBooking booking) {
-    // Find the room to get image
-    final room = StaffDataStore.availableRooms.firstWhere(
-      (room) => room.id == booking.roomId,
-      orElse: () => StaffDataStore.availableRooms.first,
-    );
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7FBF7),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Row(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Room Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                room.imageUrl,
-                width: 65,
-                height: 65,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 65,
-                    height: 65,
-                    color: Colors.grey[200],
-                    child: const Icon(
-                      Icons.photo,
-                      color: Colors.grey,
-                      size: 24,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    booking.roomName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${booking.timeSlot} • ${_formatDate(booking.date)}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'By: ${booking.studentName} (${booking.studentId})',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(booking.status),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      booking.status,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        booking.roomName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                  ),
-                  if (booking.approvedBy != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Approved by: ${booking.approvedBy}',
-                      style: TextStyle(
-                        color: Colors.green[700],
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                      Text(
+                        '${booking.timeSlot} • ${_formatDate(booking.date)}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'By: ${booking.studentName} (${booking.studentId})',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(booking.status),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              booking.status,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDateTime(booking.bookedAt),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (booking.approvedBy != null) ...[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Approved by:',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 10,
+                        ),
+                      ),
+                      Text(
+                        booking.approvedByName ?? booking.approvedBy!,
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
+              ],
             ),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF1FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  final room = StaffDataStore.availableRooms.firstWhere(
-                    (r) => r.id == booking.roomId,
-                    orElse: () => StaffDataStore.availableRooms.first,
-                  );
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => RoomDetailPage(room: room, booking: booking)),
-                  );
+                  _showBookingDetails(booking);
                 },
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFEAF1FF),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: const Text(
-                  'See detail',
+                  'View Details',
                   style: TextStyle(
                     color: Color(0xFF204C72),
                     fontWeight: FontWeight.w600,
@@ -289,6 +305,65 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showBookingDetails(UserBooking booking) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Booking Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Room', booking.roomName),
+              _buildDetailRow('Time Slot', booking.timeSlot),
+              _buildDetailRow('Booking Date', _formatDate(booking.date)),
+              _buildDetailRow('Student', '${booking.studentName} (${booking.studentId})'),
+              _buildDetailRow('Status', booking.status),
+              _buildDetailRow('Booked At', _formatDateTime(booking.bookedAt)),
+              if (booking.approvedBy != null) ...[
+                _buildDetailRow('Approved By', booking.approvedByName ?? booking.approvedBy!),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -308,5 +383,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${_formatDate(dateTime)} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
