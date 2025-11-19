@@ -1,11 +1,136 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:room_booking/lecturer/home_admin.dart';
-import './student/homepage.dart';
-import './staff/home_staff.dart';
-import 'app_theme.dart'; 
+import 'student/homepage.dart';
+import 'staff/home_staff.dart';
+import 'lecturer/home_lecturer.dart'; 
+//import 'register.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-class SignInScreen extends StatelessWidget {
-  const SignInScreen({Key? key}) : super(key: key);
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final String url = 'localhost:3000';
+  bool isWaiting = false;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadyLoggedIn();
+  }
+
+  Future<void> _checkIfAlreadyLoggedIn() async {
+    final storage = await SharedPreferences.getInstance();
+    final userString = storage.getString('user');
+    
+    if (userString != null) {
+      final user = jsonDecode(userString);
+      if (user['uid'] != null && mounted) {
+        _redirectBasedOnUserType(user);
+      }
+    }
+  }
+
+  void _redirectBasedOnUserType(Map<String, dynamic> user) {
+  // Use 'role' instead of 'userType' since that's what the backend returns
+  final userRole = user['role'] ?? 'student';
+  
+  print('Redirecting user with role: $userRole');
+  
+  Widget targetScreen;
+  switch (userRole) {
+    case 'staff':
+      targetScreen = HomeStaff(); 
+      break;
+    case 'lecturer':
+      targetScreen = HomeLecturer(); 
+      break;
+    case 'student':
+    default:
+      targetScreen = HomeScreen();
+      break;
+  }
+  
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => targetScreen),
+    (route) => false,
+  );
+}
+
+  void popDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void login() async {
+    setState(() {
+      isWaiting = true;
+    });
+    
+    try {
+      final Uri uri = Uri.http(url, '/api/login');
+      final Map account = {
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+      };
+      
+      final http.Response response = await http
+          .post(
+            uri,
+            body: jsonEncode(account),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final user = jsonDecode(response.body);
+        final storage = await SharedPreferences.getInstance();
+        await storage.setString('user', jsonEncode(user));
+        
+        if (!mounted) return;
+        
+        // Redirect based on user type
+        _redirectBasedOnUserType(user);
+      } else {
+        final errorResponse = jsonDecode(response.body);
+        if (!mounted) return;
+        popDialog(errorResponse['error'] ?? 'Login failed');
+      }
+    } on TimeoutException catch (e) {
+      if (!mounted) return;
+      popDialog('Timeout error, try again!');
+    } catch (e) {
+      if (!mounted) return;
+      popDialog('Unknown error, try again!');
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        isWaiting = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,14 +138,13 @@ class SignInScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // ---------- Header ----------
           Container(
-            width: 1000,
             height: 200,
+            width: double.infinity,
             decoration: const BoxDecoration(
               color: Color(0xFF2C5473),
               borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(50),
+                bottomRight: Radius.circular(100),
               ),
             ),
             child: SafeArea(
@@ -35,104 +159,79 @@ class SignInScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Welcome to Room Reservation',
+                    'Welcome to Room Reservation System',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 16,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
           ),
-
-          // ---------- Body ----------
+          
           Padding(
             padding: const EdgeInsets.only(top: 220),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // ID Field
-                  _buildTextField('ID Number', 'Enter your ID number'),
-                  const SizedBox(height: 16),
-                  
-                  // Name Field
-                  _buildTextField('Full Name', 'Enter your full name'),
-                  const SizedBox(height: 16),
-                  
-                  // Username Field
-                  _buildTextField('Username', 'Enter your username'),
-                  const SizedBox(height: 16),
-                  
-                  // Password Field
-                  _buildPasswordField('Password', '*********'),
-                  const SizedBox(height: 20),
-                  
-                  // Role Selection
-                  const Text(
-                    'Select Role',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E2A3A),
+                  TextField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildRoleButtons(context),
+                  const SizedBox(height: 16),
+                  
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                  ),
                   const SizedBox(height: 30),
                   
-                  // Sign In Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => _goToHome(context, 'student'),
+                      onPressed: isWaiting ? null : login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2C5473),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
                       ),
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: isWaiting 
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
+                  
                   const SizedBox(height: 20),
-
-                  // Sign Up Link
+                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
+                      const Text("Don't have an account? "),
                       GestureDetector(
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Sign up feature coming soon!'),
-                              backgroundColor: const Color(0xFF2C5473),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const RegisterScreen()),
                           );
                         },
                         child: const Text(
@@ -145,7 +244,6 @@ class SignInScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -153,125 +251,5 @@ class SignInScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Widget _buildTextField(String label, String hint) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1E2A3A),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField(String label, String hint) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1E2A3A),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          obscureText: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRoleButtons(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8EDF1),
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          _buildRoleButton('Student', 0, context),
-          _buildRoleButton('Staff', 1, context),
-          _buildRoleButton('Admin', 2, context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleButton(String role, int index, BuildContext context) {
-    // For demo purposes, we'll use a fixed selection. In real app, you'd manage state.
-    bool isSelected = index == 0; // Default to Student selected
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _goToHome(context, role.toLowerCase()),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 40,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF2C5473) : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            role,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _goToHome(BuildContext context, String role) {
-    if (role == 'student') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
-    } else if (role == 'staff') {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeStaff()));
-    } else {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeAdmin()));
-    }
   }
 }
