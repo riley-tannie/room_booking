@@ -223,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   const SizedBox(height: 20),
                   
-                  Row(
+                  /*Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text("Don't have an account? "),
@@ -243,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                  ),
+                  ),*/
                 ],
               ),
             ),
