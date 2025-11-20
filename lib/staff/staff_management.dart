@@ -119,6 +119,16 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     }
   }
 
+  Map<String, List<BookingRoom>> _groupRoomsByCategory(List<BookingRoom> rooms) {
+    final Map<String, List<BookingRoom>> groupedRooms = {};
+    
+    for (var room in rooms) {
+      final category = room.category;
+      groupedRooms.putIfAbsent(category, () => []).add(room);
+    }
+    return groupedRooms;
+  }
+
   Future<void> _createRoom() async {
     if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
       if (!mounted) return;
@@ -197,6 +207,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final groupedRooms = _groupRoomsByCategory(_rooms);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
@@ -254,7 +266,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : _buildCurrentTabContent(),
+                      : _buildCurrentTabContent(groupedRooms),
                 ),
               ],
             ),
@@ -370,16 +382,16 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     );
   }
 
-  Widget _buildCurrentTabContent() {
+  Widget _buildCurrentTabContent(Map<String, List<BookingRoom>> groupedRooms) {
     if (_selectedTab == 0) {
-      return _buildRoomList();
+      return _buildRoomList(groupedRooms);
     } else {
       return _buildAddRoomForm();
     }
   }
 
-  Widget _buildRoomList() {
-    return _rooms.isEmpty
+  Widget _buildRoomList(Map<String, List<BookingRoom>> groupedRooms) {
+    return groupedRooms.isEmpty
         ? const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -398,12 +410,32 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           )
         : RefreshIndicator(
             onRefresh: _loadRooms,
-            child: ListView.builder(
-              itemCount: _rooms.length,
-              itemBuilder: (context, index) {
-                final room = _rooms[index];
-                return _buildRoomCard(room);
-              },
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...groupedRooms.keys.map((category) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              category,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E2A3A),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          
+                          ...groupedRooms[category]!.map((room) => _buildRoomCard(room)),
+                          const SizedBox(height: 24),
+                        ],
+                      )),
+                ],
+              ),
             ),
           );
   }
@@ -420,21 +452,31 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
     final bool isNetworkImage = room.imageUrl.startsWith('http');
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: room.isDisabled ? Colors.grey[50] : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        border: room.isDisabled ? Border.all(color: Colors.red.withOpacity(0.3), width: 1) : null,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 70,
+              height: 70,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8EDF1),
                 borderRadius: BorderRadius.circular(12),
+                color: room.isDisabled ? Colors.grey[300] : const Color(0xFFE8EDF1),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -443,19 +485,19 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                         room.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return _buildRoomIcon(room.category);
+                          return _buildRoomIcon(room.category, room.isDisabled);
                         },
                       )
                     : Image.asset(
                         room.imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return _buildRoomIcon(room.category);
+                          return _buildRoomIcon(room.category, room.isDisabled);
                         },
                       ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             
             Expanded(
               child: Column(
@@ -466,54 +508,24 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                       Expanded(
                         child: Text(
                           room.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                            color: room.isDisabled ? Colors.grey : Colors.black87,
                           ),
                         ),
                       ),
                       if (room.isDisabled)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'DISABLED',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        const Icon(Icons.block, size: 16, color: Colors.red),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    room.category,
+                    room.location,
                     style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
+                      fontSize: 14,
+                      color: room.isDisabled ? Colors.grey : Colors.grey[600],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          room.location,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 8),
                   
@@ -632,14 +644,31 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     );
   }
 
-  Widget _buildRoomIcon(String category) {
+  Widget _buildRoomIcon(String category, bool isDisabled) {
     return Center(
       child: Icon(
-        _getRoomIcon(category),
-        size: 24,
-        color: const Color(0xFF2C5473),
+        _getRoomIconData(category),
+        size: 30,
+        color: isDisabled ? Colors.grey : const Color(0xFF2C5473),
       ),
     );
+  }
+
+  IconData _getRoomIconData(String category) {
+    switch (category) {
+      case 'Study Room':
+        return Icons.school;
+      case 'Multimedia Room':
+        return Icons.video_library;
+      case 'Lecture Hall':
+        return Icons.people;
+      case 'Library':
+        return Icons.library_books;
+      case 'Conference Room':
+        return Icons.business_center;
+      default:
+        return Icons.meeting_room;
+    }
   }
 
   Widget _buildAddRoomForm() {
@@ -687,7 +716,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                     value: category,
                     child: Row(
                       children: [
-                        Icon(_getRoomIcon(category), size: 20),
+                        Icon(_getRoomIconData(category), size: 20),
                         const SizedBox(width: 8),
                         Text(category),
                       ],
@@ -753,22 +782,5 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         ),
       ),
     );
-  }
-
-  IconData _getRoomIcon(String category) {
-    switch (category) {
-      case 'Study Room':
-        return Icons.school;
-      case 'Multimedia Room':
-        return Icons.video_library;
-      case 'Lecture Hall':
-        return Icons.people;
-      case 'Library':
-        return Icons.library_books;
-      case 'Conference Room':
-        return Icons.business_center;
-      default:
-        return Icons.meeting_room;
-    }
   }
 }
