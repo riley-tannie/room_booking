@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'student/homepage.dart';
 import 'staff/home_staff.dart';
 import 'lecturer/home_lecturer.dart'; 
-//import 'register.dart';
+import 'register.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,7 +16,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final String url = 'localhost:3000';
+  final String url = '172.25.0.82:3000';
   bool isWaiting = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -50,9 +50,9 @@ class _LoginScreenState extends State<LoginScreen> {
     case 'staff':
       targetScreen = HomeStaff(); 
       break;
-    case 'lecturer':
+    /*case 'lecturer':
       targetScreen = HomeLecturer(); 
-      break;
+      break;*/
     case 'student':
     default:
       targetScreen = HomeScreen();
@@ -223,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   const SizedBox(height: 20),
                   
-                  /*Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text("Don't have an account? "),
@@ -243,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ],
-                  ),*/
+                  ),
                 ],
               ),
             ),

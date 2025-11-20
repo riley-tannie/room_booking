@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000';
-  
+  static const String baseUrl = 'http://172.25.249.113:3000';
+
   static final Map<String, String> headers = {
     'Content-Type': 'application/json',
   };
@@ -12,25 +12,29 @@ class ApiService {
   // Test connection
   static Future<bool> testConnection() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/health'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/health'), headers: headers)
+          .timeout(const Duration(seconds: 10));
       return response.statusCode == 200;
     } catch (e) {
       return false;
     }
   }
-  
+
   // Login
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/login'),
-        body: jsonEncode({'email': email, 'password': password}),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
-      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/login'),
+            body: jsonEncode({'email': email, 'password': password}),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         final user = jsonDecode(response.body);
         final storage = await SharedPreferences.getInstance();
@@ -45,7 +49,7 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Register
   static Future<Map<String, dynamic>> register({
     required String fullName,
@@ -54,17 +58,19 @@ class ApiService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/register'),
-        body: jsonEncode({
-          'fullName': fullName,
-          'idNumber': idNumber,
-          'email': email,
-          'password': password
-        }),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
-      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/register'),
+            body: jsonEncode({
+              'fullName': fullName,
+              'idNumber': idNumber,
+              'email': email,
+              'password': password,
+            }),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -76,14 +82,13 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get all rooms
   static Future<List<dynamic>> getAvailableRooms() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/rooms'), headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -98,11 +103,10 @@ class ApiService {
   // Get today's rooms for lecturer
   static Future<List<dynamic>> getTodayRooms() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms/lecturer'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/rooms/lecturer'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -112,15 +116,17 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get time slots
   static Future<List<dynamic>> getRoomTimeSlots(String roomId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms/$roomId/time-slots'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/rooms/$roomId/time-slots'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -134,11 +140,13 @@ class ApiService {
   // Get today's time slots for a room
   static Future<List<dynamic>> getTodayTimeSlots(String roomId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms/lecturer/$roomId'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/rooms/lecturer/$roomId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['time_slots'] ?? [];
@@ -149,7 +157,7 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Create booking
   static Future<Map<String, dynamic>> createBooking({
     required String studentId,
@@ -157,16 +165,18 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/bookings'),
-        body: jsonEncode({
-          'studentId': studentId,
-          'roomId': roomId,
-          'timeSlot': timeSlot
-        }),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
-      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/bookings'),
+            body: jsonEncode({
+              'studentId': studentId,
+              'roomId': roomId,
+              'timeSlot': timeSlot,
+            }),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -182,15 +192,17 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get user bookings
   static Future<List<dynamic>> getStudentBookings(String studentId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/student/$studentId'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/bookings/student/$studentId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -200,15 +212,17 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get today's bookings for a student
   static Future<List<dynamic>> getStudentTodayBookings(String studentId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -218,15 +232,19 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Check if student has booked today
   static Future<bool> hasStudentBookedToday(String studentId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/student/$studentId/has-booked-today'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/api/bookings/student/$studentId/has-booked-today',
+            ),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         return result['hasBooked'] ?? false;
@@ -236,15 +254,14 @@ class ApiService {
       return false;
     }
   }
-  
+
   // Get all bookings (for staff/lecturer)
   static Future<List<dynamic>> getAllBookings() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/bookings'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -258,11 +275,10 @@ class ApiService {
   // Get today's pending requests for lecturer
   static Future<List<dynamic>> getTodayPendingRequests() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/pending'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/bookings/pending'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -276,11 +292,13 @@ class ApiService {
   // Get approval history for lecturer
   static Future<List<dynamic>> getLecturerHistory(String lecturerId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/history/$lecturerId'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/bookings/history/$lecturerId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -290,7 +308,7 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Update booking status
   static Future<Map<String, dynamic>> updateBookingStatus({
     required String bookingId,
@@ -298,15 +316,14 @@ class ApiService {
     required String approvedBy,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/bookings/$bookingId/status'),
-        body: jsonEncode({
-          'status': status,
-          'approvedBy': approvedBy
-        }),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
-      
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/api/bookings/$bookingId/status'),
+            body: jsonEncode({'status': status, 'approvedBy': approvedBy}),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -318,15 +335,14 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get dashboard stats
   static Future<Map<String, dynamic>> getDashboardStats() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dashboard/stats'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/dashboard/stats'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -340,11 +356,13 @@ class ApiService {
   // Get today's dashboard stats
   static Future<Map<String, dynamic>> getTodayDashboardStats() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dashboard/stats/today'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/dashboard/stats/today'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -356,13 +374,17 @@ class ApiService {
   }
 
   // Get lecturer dashboard stats
-  static Future<Map<String, dynamic>> getLecturerDashboardStats(String lecturerId) async {
+  static Future<Map<String, dynamic>> getLecturerDashboardStats(
+    String lecturerId,
+  ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dashboard/lecturer/$lecturerId'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/dashboard/lecturer/$lecturerId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -372,7 +394,7 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Logout
   static Future<void> logout() async {
     try {
@@ -382,7 +404,7 @@ class ApiService {
       rethrow;
     }
   }
-  
+
   // Get current user
   static Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
@@ -396,7 +418,7 @@ class ApiService {
       return null;
     }
   }
-  
+
   // Get current student ID
   static Future<String?> getCurrentStudentId() async {
     try {
@@ -406,7 +428,7 @@ class ApiService {
       return null;
     }
   }
-  
+
   // Get current student name
   static Future<String?> getCurrentStudentName() async {
     try {
@@ -416,7 +438,7 @@ class ApiService {
       return null;
     }
   }
-  
+
   // Get student role
   static Future<String?> getCurrentUserRole() async {
     try {
@@ -430,11 +452,13 @@ class ApiService {
   // Get student requests
   static Future<List<dynamic>> getStudentRequests(String studentId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/bookings/student/$studentId/today'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -488,30 +512,75 @@ class ApiService {
   // --- STAFF MANAGEMENT METHODS ---
 
   // Create new room
-  static Future<Map<String, dynamic>> createRoom({
+  /*static Future<Map<String, dynamic>> createRoom({
     required String name,
     required String category,
     required String location,
     required String description,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/rooms'),
-        body: jsonEncode({
+      try {
+        final response = await http.post(
+          Uri.parse('$baseUrl/api/rooms'),
+          body: jsonEncode({
           'name': name,
           'category': category,
           'location': location,
           'description': description,
-        }),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+          }),
+         headers: headers,
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+        } 
+        else {
+          final errorResponse = jsonDecode(response.body);
+          final errorMessage = errorResponse['error'] ?? 'Room creation failed';
+          throw Exception(errorMessage);
+        }
+      } catch (e) {
+        rethrow;
+      }
+  }*/
+    // Create new room with improved error handling //New version fixed FormatException
+  static Future<Map<String, dynamic>> createRoom({
+    required String name,
+    required String category,
+    required String location,
+    String? description,
+    bool isDisabled = false, // New field for room status
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/rooms'),
+            body: jsonEncode({
+              'name': name,
+              'category': category,
+              'location': location,
+              'description': description,
+              'isDisabled': isDisabled? 1 : 0, // Send as integer (1 or 0)
+            }),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        final errorResponse = jsonDecode(response.body);
-        final errorMessage = errorResponse['error'] ?? 'Room creation failed';
-        throw Exception(errorMessage);
+        // เพิ่มการจัดการข้อผิดพลาดเพื่อป้องกัน FormatException
+        try {
+          final errorResponse = jsonDecode(response.body);
+          final errorMessage =
+              errorResponse['error'] ??
+              'Room creation failed (Status: ${response.statusCode})';
+          throw Exception(errorMessage);
+        } catch (e) {
+          // หากถอดรหัส JSON ไม่ได้ แสดงว่าได้รับ HTML
+          throw Exception(
+            'Room creation failed: Server returned non-JSON data (HTML error page). Status: ${response.statusCode}',
+          );
+        }
       }
     } catch (e) {
       rethrow;
@@ -526,15 +595,17 @@ class ApiService {
     required String description,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/rooms/$roomId'),
-        body: jsonEncode({
-          'name': name,
-          'location': location,
-          'description': description,
-        }),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/api/rooms/$roomId'),
+            body: jsonEncode({
+              'name': name,
+              'location': location,
+              'description': description,
+            }),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -548,13 +619,16 @@ class ApiService {
     }
   }
 
+
   // Disable room
   static Future<Map<String, dynamic>> disableRoom(String roomId) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/rooms/$roomId/disable'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/api/rooms/$roomId/disable'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -571,10 +645,9 @@ class ApiService {
   // Enable room
   static Future<Map<String, dynamic>> enableRoom(String roomId) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/rooms/$roomId/enable'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .put(Uri.parse('$baseUrl/api/rooms/$roomId/enable'), headers: headers)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -594,16 +667,21 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/disable'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .put(
+            Uri.parse(
+              '$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/disable',
+            ),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
         final errorResponse = jsonDecode(response.body);
-        final errorMessage = errorResponse['error'] ?? 'Time slot disable failed';
+        final errorMessage =
+            errorResponse['error'] ?? 'Time slot disable failed';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -617,16 +695,19 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/enable'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/enable'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
         final errorResponse = jsonDecode(response.body);
-        final errorMessage = errorResponse['error'] ?? 'Time slot enable failed';
+        final errorMessage =
+            errorResponse['error'] ?? 'Time slot enable failed';
         throw Exception(errorMessage);
       }
     } catch (e) {
@@ -637,10 +718,9 @@ class ApiService {
   // Get rooms with availability
   static Future<List<dynamic>> getRoomsWithAvailability() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms/availability'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/rooms/availability'), headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);

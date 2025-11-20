@@ -21,7 +21,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   final TextEditingController _roomNameController = TextEditingController();
   final TextEditingController _roomLocationController = TextEditingController();
-  final TextEditingController _roomDescriptionController = TextEditingController();
+  final TextEditingController _roomDescriptionController =
+      TextEditingController();
   String _selectedCategory = 'Study Room';
 
   final List<String> _categories = [
@@ -29,8 +30,35 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     'Multimedia Room',
     'Lecture Hall',
     'Library',
-    'Conference Room'
+    'Conference Room',
   ];
+  
+  // Function to check if the time slot has already passed
+  bool _isTimePassed(String timeSlot) {
+    final now = DateTime.now();
+    // แปลงเวลาปัจจุบันเป็นนาทีเพื่อเปรียบเทียบ
+    final currentTime = now.hour * 60 + now.minute; 
+    
+    try {
+      // Parse เวลาสิ้นสุดจาก Time Slot string (เช่น "08:00-10:00" -> 10:00)
+      final timeParts = timeSlot.split('-');
+      if (timeParts.length < 2) return false;
+
+      final endTimeStr = timeParts[1];
+      final endHourMinute = endTimeStr.split(':');
+      if (endHourMinute.length < 2) return false;
+      
+      final endHours = int.parse(endHourMinute[0]);
+      final endMinutes = int.parse(endHourMinute[1]);
+      final slotEndTime = endHours * 60 + endMinutes;
+      
+      // ตรวจสอบ: เวลาปัจจุบัน >= เวลาสิ้นสุดของสล็อต
+      return currentTime >= slotEndTime;
+    } catch (e) {
+      // หากเกิดข้อผิดพลาดในการแปลงเวลา ให้ถือว่ายังไม่ผ่าน
+      return false; 
+    }
+  }
 
   @override
   void initState() {
@@ -47,67 +75,71 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Future<void> _loadRooms() async {
-  try {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Single API call to get all rooms with their slots data
-    final roomsData = await ApiService.getAvailableRooms();
-    
-    if (!mounted) return;
-    
-    setState(() {
-      _rooms = roomsData.map((roomData) => BookingRoom.fromJson(roomData)).toList();
-      _isLoading = false;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = false;
-    });
+    try {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Single API call to get all rooms with their slots data
+      final roomsData = await ApiService.getAvailableRooms();
+
+      if (!mounted) return;
+
+      setState(() {
+        _rooms = roomsData
+            .map((roomData) => BookingRoom.fromJson(roomData))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   Future<void> _createRoom() async {
-  if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please fill in room name and location')),
-    );
-    return;
+    if (_roomNameController.text.isEmpty ||
+        _roomLocationController.text.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in room name and location')),
+      );
+      return;
+    }
+
+    try {
+      await ApiService.createRoom(
+        name: _roomNameController.text,
+        category: _selectedCategory,
+        location: _roomLocationController.text,
+        description: _roomDescriptionController.text,
+        isDisabled: true, // New rooms are disabled by default
+      );
+
+      _roomNameController.clear();
+      _roomLocationController.clear();
+      _roomDescriptionController.clear();
+
+      await _loadRooms();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Room created successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create room: $e')));
+    }
   }
 
-  try {
-    await ApiService.createRoom(
-      name: _roomNameController.text,
-      category: _selectedCategory,
-      location: _roomLocationController.text,
-      description: _roomDescriptionController.text,
-    );
-
-    _roomNameController.clear();
-    _roomLocationController.clear();
-    _roomDescriptionController.clear();
-
-    await _loadRooms();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Room created successfully')),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to create room: $e')),
-    );
-  }
-}
-
-  Future<void> _disableRoom(BookingRoom room) async {
+  /*Future<void> _disableRoom(BookingRoom room) async {
     final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
     final totalSlots = room.timeSlots.length;
 
@@ -130,20 +162,58 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         SnackBar(content: Text('Failed to disable room: $e')),
       );
     }
+  }*/
+  //new version of disable room
+  Future<void> _disableRoom(BookingRoom room) async {
+    //count available 'free' slots that are not past time
+    final availableFreeSlots = room.timeSlots
+        .where((slot) => slot.status == 'free' && !_isTimePassed(slot.time))
+        .length;
+
+    //count slots that are 'pending' or 'reserved'
+    final nonFreeOrDisabledSlots = room.timeSlots
+        .where((slot) => slot.status == 'pending' || slot.status == 'reserved')
+        .length;
+
+    //check if there are any non-free slots
+    if (nonFreeOrDisabledSlots > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cannot disable room with active bookings (Pending or Reserved).',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // If there are no pending reservations, you can call the API to close the room.
+    try {
+      await ApiService.disableRoom(room.id);
+      await _loadRooms();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Room disabled successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to disable room: $e')));
+    }
   }
 
   Future<void> _enableRoom(BookingRoom room) async {
     try {
       await ApiService.enableRoom(room.id);
       await _loadRooms();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Room enabled successfully')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to enable room: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to enable room: $e')));
     }
   }
 
@@ -158,9 +228,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
             height: 110,
             decoration: const BoxDecoration(
               color: Color(0xFF2C5473),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(70),
-              ),
+              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(70)),
             ),
             child: const SafeArea(
               child: Align(
@@ -205,7 +273,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Content Area
                 Expanded(
                   child: _isLoading
@@ -296,7 +364,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
               ),
             ],
-          )
+          ),
         ),
       ),
     );
@@ -346,10 +414,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 SizedBox(height: 16),
                 Text(
                   'No rooms available',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ],
             ),
@@ -367,9 +432,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildRoomCard(BookingRoom room) {
-    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final freeSlots = room.timeSlots
+        .where((slot) => slot.status == 'free')
+        .length;
     final totalSlots = room.timeSlots.length;
-    
+
     final bool canDisableRoom = freeSlots == totalSlots && !room.isDisabled;
     final bool canEnableRoom = room.isDisabled;
 
@@ -413,7 +480,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Room Details
             Expanded(
               child: Column(
@@ -433,7 +500,10 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                       ),
                       if (room.isDisabled)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.red,
                             borderRadius: BorderRadius.circular(8),
@@ -452,15 +522,16 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                   const SizedBox(height: 4),
                   Text(
                     room.category,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                      Icon(
+                        Icons.location_on,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -474,19 +545,26 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  
+
                   // Availability Status
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: freeSlots > 0 ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                      color: freeSlots > 0
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: freeSlots > 0 ? Colors.green : Colors.orange,
                       ),
                     ),
                     child: Text(
-                      freeSlots > 0 ? '$freeSlots/$totalSlots slots available' : 'No available slots',
+                      freeSlots > 0
+                          ? '$freeSlots/$totalSlots slots available'
+                          : 'No available slots',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -497,37 +575,60 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ],
               ),
             ),
-            
+
             // Action Buttons
             Column(
               children: [
                 // Edit Button
-                SizedBox(
-                  width: 80,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RoomEditPage(room: room),
+                if (room.isDisabled)...{  // Only allow editing if room is disabled
+                  SizedBox(
+                      width: 80,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => RoomEditPage(room: room),
+                            ),
+                          ).then((_) => _loadRooms());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2C5473),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                      ).then((_) => _loadRooms());
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2C5473),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        child: const Text(
+                          'Edit',
+                          style: TextStyle(fontSize: 12, color: Colors.white),
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      'Edit',
-                      style: TextStyle(fontSize: 12, color: Colors.white),
+                  } else ...{
+                    SizedBox(
+                      width: 80,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Active',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  },
                 const SizedBox(height: 8),
-                
+
                 // Enable/Disable Button
                 if (canDisableRoom)
                   SizedBox(
@@ -625,13 +726,10 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               const SizedBox(height: 4),
               Text(
                 'Fill in the details to create a new room',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 20),
-              
+
               TextField(
                 controller: _roomNameController,
                 decoration: const InputDecoration(
@@ -641,7 +739,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 items: _categories.map((category) {
@@ -670,7 +768,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: _roomLocationController,
                 decoration: const InputDecoration(
@@ -680,7 +778,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: _roomDescriptionController,
                 decoration: const InputDecoration(
@@ -691,7 +789,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
-              
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

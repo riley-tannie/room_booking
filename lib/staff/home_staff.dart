@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:room_booking/staff/dashboard.dart';
-import 'package:room_booking/staff/booking_history.dart';
-import 'package:room_booking/staff/profile.dart';
-import 'package:room_booking/staff/room_detail.dart';
-import 'package:room_booking/staff/staff_management.dart';
-import 'package:room_booking/data_store.dart';
-import 'package:room_booking/api_service.dart';
+import './dashboard.dart';
+import './booking_history.dart';
+import './profile.dart';
+import './room_detail.dart';
+import './staff_management.dart';
+import '../data_store.dart';
+import '../api_service.dart';
 
 class HomeStaff extends StatefulWidget {
   @override
@@ -265,6 +265,7 @@ class _HomeStaffState extends State<HomeStaff> {
             ),
           ),
           const SizedBox(height: 20),
+          // Refresh Button
           ElevatedButton(
             onPressed: _loadRooms,
             style: ElevatedButton.styleFrom(

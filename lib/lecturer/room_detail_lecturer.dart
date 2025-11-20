@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/*import 'package:flutter/material.dart';
 
 class RoomDetailLecturer extends StatelessWidget {
   final String roomName;
@@ -31,4 +31,4 @@ class RoomDetailLecturer extends StatelessWidget {
       ),
     );
   }
-}
+}*/

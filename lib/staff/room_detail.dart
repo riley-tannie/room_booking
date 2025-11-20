@@ -211,15 +211,19 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[300]!),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildLegendItem(const Color(0xFF26A65B), 'Available'),
-          _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
-          _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
-          _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
-          _buildLegendItem(const Color(0xFF9CA3AF), 'Time Passed'),
-        ],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildLegendItem(const Color(0xFF26A65B), 'Available'),
+            _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
+            _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
+            _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
+            _buildLegendItem(const Color(0xFF9CA3AF), 'Time Passed'),
+          ],
+        ),
       ),
     );
   }
@@ -293,6 +297,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
         ),
         const SizedBox(height: 16),
         
+        // Room Name and Category
         Row(
           children: [
             Icon(
@@ -318,6 +323,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
         _buildDetailRow('Category', _room.category),
         _buildDetailRow('Location', _room.location),
         
+        // Description Section
         if (_room.description.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Text(
@@ -350,12 +356,14 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
               size: 24,
             ),
             const SizedBox(width: 8),
-            const Text(
-              "Today's Time Slots",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E2A3A),
+            Expanded(
+              child: const Text(
+                "Today's Time Slots",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E2A3A),
+                ),
               ),
             ),
             const Spacer(),
@@ -424,7 +432,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFA),
-      body: Stack(
+      body: Column(
         children: [
           // Header
           Container(
@@ -467,8 +475,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           ),
 
           // Body
-          Padding(
-            padding: const EdgeInsets.only(top: 160),
+          Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : SingleChildScrollView(
