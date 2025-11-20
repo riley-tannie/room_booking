@@ -15,7 +15,7 @@ class RoomDetailPage extends StatefulWidget {
 class _RoomDetailPageState extends State<RoomDetailPage> {
   late BookingRoom _room;
   bool _isLoading = false;
-  List<dynamic> _timeSlots = [];
+  List<TimeSlot> _timeSlots = [];
 
   // Define all possible time slots
   final List<String> _allTimeSlots = ['08:00-10:00', '10:00-12:00', '13:00-15:00', '15:00-17:00'];
@@ -37,7 +37,7 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
       final timeSlotsData = await ApiService.getTodayTimeSlots(_room.id);
       
       // Ensure we have all 4 time slots, fill in missing ones
-      final List<dynamic> allSlots = [];
+      final List<TimeSlot> allSlots = [];
       
       for (String slotTime in _allTimeSlots) {
         final existingSlot = timeSlotsData.firstWhere(
@@ -45,16 +45,35 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           orElse: () => null,
         );
         
+        TimeSlot timeSlot;
         if (existingSlot != null) {
-          allSlots.add(existingSlot);
+          timeSlot = TimeSlot.fromJson(existingSlot);
         } else {
           // Create a default slot for missing time slots
-          allSlots.add({
-            'time_slot': slotTime,
-            'status': 'free', // Default to free if not found
-            'student_name': '',
-          });
+          timeSlot = TimeSlot(
+            id: 'default_$slotTime',
+            time: slotTime,
+            status: 'free',
+            displayStatus: 'Available',
+            color: const Color(0xFF26A65B),
+          );
         }
+        
+        // Check if time has passed and update status accordingly
+        if (_isTimePassed(timeSlot.time)) {
+          timeSlot = TimeSlot(
+            id: timeSlot.id,
+            time: timeSlot.time,
+            status: 'time_passed',
+            displayStatus: 'Time Passed',
+            color: const Color(0xFF8B4513), // Changed to SaddleBrown
+            studentName: timeSlot.studentName,
+            studentId: timeSlot.studentId,
+            bookingId: timeSlot.bookingId,
+          );
+        }
+        
+        allSlots.add(timeSlot);
       }
       
       setState(() {
@@ -64,50 +83,21 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     } catch (e) {
       print('Error loading room details with lecturer API: $e');
       // Fallback: create default slots for all time slots
-      final defaultSlots = _allTimeSlots.map((slotTime) => {
-        'time_slot': slotTime,
-        'status': 'free',
-        'student_name': '',
+      final defaultSlots = _allTimeSlots.map((slotTime) {
+        final isPassed = _isTimePassed(slotTime);
+        return TimeSlot(
+          id: 'fallback_$slotTime',
+          time: slotTime,
+          status: isPassed ? 'time_passed' : 'free',
+          displayStatus: isPassed ? 'Time Passed' : 'Available',
+          color: isPassed ? const Color(0xFF8B4513) : const Color(0xFF26A65B), // Changed to SaddleBrown
+        );
       }).toList();
       
       setState(() {
         _timeSlots = defaultSlots;
         _isLoading = false;
       });
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'free':
-        return const Color(0xFF26A65B);
-      case 'pending':
-        return const Color(0xFFF59E0B);
-      case 'reserved':
-        return const Color(0xFFEF4444);
-      case 'disabled':
-        return const Color(0xFF6B7280);
-      case 'time_passed':
-        return const Color(0xFF9CA3AF);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status.toLowerCase()) {
-      case 'free':
-        return 'Available';
-      case 'pending':
-        return 'Pending';
-      case 'reserved':
-        return 'Reserved';
-      case 'disabled':
-        return 'Disabled';
-      case 'time_passed':
-        return 'Time Passed';
-      default:
-        return 'Unknown';
     }
   }
 
@@ -128,18 +118,43 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
     }
   }
 
-  Widget _buildTimeSlotCard(Map<String, dynamic> slot) {
-    String status = slot['status']?.toString() ?? 'free';
-    final timeSlot = slot['time_slot']?.toString() ?? '';
-    final studentName = slot['student_name']?.toString() ?? '';
-    
-    // Check if time has passed and override status
-    if (_isTimePassed(timeSlot)) {
-      status = 'time_passed';
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'free':
+        return const Color(0xFF26A65B); // Green
+      case 'pending':
+        return const Color(0xFFF59E0B); // Amber/Orange
+      case 'reserved':
+        return const Color(0xFFEF4444); // Red
+      case 'disabled':
+        return const Color(0xFF6A0DAD); // Changed to Purple
+      case 'time_passed':
+        return const Color(0xFF8B4513); // Changed to SaddleBrown
+      default:
+        return const Color(0xFF6B7280); // Gray
     }
-    
-    final statusColor = _getStatusColor(status);
-    final statusText = _getStatusText(status);
+  }
+
+  String _getStatusText(String status) {
+    switch (status.toLowerCase()) {
+      case 'free':
+        return 'Available';
+      case 'pending':
+        return 'Pending';
+      case 'reserved':
+        return 'Reserved';
+      case 'disabled':
+        return 'Disabled';
+      case 'time_passed':
+        return 'Time Passed';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  Widget _buildTimeSlotCard(TimeSlot slot) {
+    final statusColor = _getStatusColor(slot.status);
+    final statusText = _getStatusText(slot.status);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -160,20 +175,31 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    timeSlot,
+                    slot.time,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: status == 'time_passed' ? Colors.grey : Colors.black87,
+                      color: slot.status == 'time_passed' ? Colors.grey : Colors.black87,
                     ),
                   ),
-                  if (studentName.isNotEmpty && status != 'time_passed') ...[
+                  if (slot.studentName != null && slot.studentName!.isNotEmpty && slot.status != 'time_passed') ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Booked by: $studentName',
+                      'Booked by: ${slot.studentName}',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                  if (slot.status == 'time_passed') ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'This time slot has ended',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
@@ -217,8 +243,8 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
           _buildLegendItem(const Color(0xFF26A65B), 'Available'),
           _buildLegendItem(const Color(0xFFF59E0B), 'Pending'),
           _buildLegendItem(const Color(0xFFEF4444), 'Reserved'),
-          _buildLegendItem(const Color(0xFF6B7280), 'Disabled'),
-          _buildLegendItem(const Color(0xFF9CA3AF), 'Time Passed'),
+          _buildLegendItem(const Color(0xFF6A0DAD), 'Disabled'), // Purple
+          _buildLegendItem(const Color(0xFF8B4513), 'Time Passed'), // SaddleBrown
         ],
       ),
     );
@@ -478,6 +504,9 @@ class _RoomDetailPageState extends State<RoomDetailPage> {
                       children: [
                         // Room Header with Image and Details
                         _buildRoomHeader(),
+                        
+                        // Current Time Indicator
+                        const SizedBox(height: 16),
                         
                         // Status Legend
                         _buildStatusLegend(),

@@ -47,71 +47,119 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Future<void> _loadRooms() async {
-  try {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    // Single API call to get all rooms with their slots data
-    final roomsData = await ApiService.getAvailableRooms();
-    
-    if (!mounted) return;
-    
-    setState(() {
-      _rooms = roomsData.map((roomData) => BookingRoom.fromJson(roomData)).toList();
-      _isLoading = false;
-    });
-  } catch (e) {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoading = false;
-    });
+    try {
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // Use getAllRooms to include disabled rooms
+      final roomsData = await ApiService.getAllRooms();
+      
+      if (!mounted) return;
+      
+      final List<BookingRoom> detailedRooms = [];
+      
+      for (var roomData in roomsData) {
+        try {
+          final room = BookingRoom.fromJson(roomData);
+          
+          final timeSlotsData = await ApiService.getTodayTimeSlots(room.id);
+          
+          room.timeSlots = timeSlotsData.map((slotData) {
+            final slot = TimeSlot.fromJson(slotData);
+            if (_isTimePassed(slot.time)) {
+              return TimeSlot(
+                id: slot.id,
+                time: slot.time,
+                status: 'time_passed',
+                displayStatus: 'Time Passed',
+                color: const Color(0xFF9CA3AF),
+                studentName: slot.studentName,
+                studentId: slot.studentId,
+                bookingId: slot.bookingId,
+              );
+            }
+            return slot;
+          }).toList();
+          
+          detailedRooms.add(room);
+        } catch (e) {
+          detailedRooms.add(BookingRoom.fromJson(roomData));
+        }
+      }
+      
+      setState(() {
+        _rooms = detailedRooms;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
+
+  bool _isTimePassed(String timeSlot) {
+    final now = DateTime.now();
+    final currentTime = now.hour * 60 + now.minute;
+    
+    try {
+      final endTimeStr = timeSlot.split('-')[1];
+      final endHours = int.parse(endTimeStr.split(':')[0]);
+      final endMinutes = int.parse(endTimeStr.split(':')[1]);
+      final slotEndTime = endHours * 60 + endMinutes;
+      
+      return currentTime >= slotEndTime;
+    } catch (e) {
+      return false;
+    }
+  }
 
   Future<void> _createRoom() async {
-  if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please fill in room name and location')),
-    );
-    return;
+    if (_roomNameController.text.isEmpty || _roomLocationController.text.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in room name and location')),
+      );
+      return;
+    }
+
+    try {
+      await ApiService.createRoom(
+        name: _roomNameController.text,
+        category: _selectedCategory,
+        location: _roomLocationController.text,
+        description: _roomDescriptionController.text,
+      );
+
+      _roomNameController.clear();
+      _roomLocationController.clear();
+      _roomDescriptionController.clear();
+
+      await _loadRooms();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Room created successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create room: $e')),
+      );
+    }
   }
-
-  try {
-    await ApiService.createRoom(
-      name: _roomNameController.text,
-      category: _selectedCategory,
-      location: _roomLocationController.text,
-      description: _roomDescriptionController.text,
-    );
-
-    _roomNameController.clear();
-    _roomLocationController.clear();
-    _roomDescriptionController.clear();
-
-    await _loadRooms();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Room created successfully')),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to create room: $e')),
-    );
-  }
-}
 
   Future<void> _disableRoom(BookingRoom room) async {
-    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
-    final totalSlots = room.timeSlots.length;
+    final canDisable = room.timeSlots.every((slot) => 
+        slot.status == 'free' || slot.status == 'time_passed' || _isTimePassed(slot.time)) 
+        && !room.isDisabled;
 
-    if (freeSlots != totalSlots) {
+    if (!canDisable) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cannot disable room with booked or pending slots')),
       );
@@ -153,7 +201,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
       backgroundColor: const Color(0xFFF9FAFA),
       body: Stack(
         children: [
-          // Header
           Container(
             height: 110,
             decoration: const BoxDecoration(
@@ -178,12 +225,10 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
             ),
           ),
 
-          // Content
           Padding(
             padding: const EdgeInsets.only(top: 130, left: 20, right: 20),
             child: Column(
               children: [
-                // Tab Bar
                 Container(
                   height: 44,
                   decoration: BoxDecoration(
@@ -206,7 +251,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
                 const SizedBox(height: 20),
                 
-                // Content Area
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -218,7 +262,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         ],
       ),
 
-      // Bottom Navigation
       bottomNavigationBar: Container(
         margin: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
         height: 50,
@@ -262,7 +305,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 );
                 break;
               case 1:
-                // Current page
                 break;
               case 2:
                 Navigator.pushReplacement(
@@ -367,13 +409,15 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildRoomCard(BookingRoom room) {
-    final freeSlots = room.timeSlots.where((slot) => slot.status == 'free').length;
+    final freeSlots = room.timeSlots.where((slot) => 
+        slot.status == 'free' && !_isTimePassed(slot.time)).length;
     final totalSlots = room.timeSlots.length;
     
-    final bool canDisableRoom = freeSlots == totalSlots && !room.isDisabled;
+    final bool canDisableRoom = room.timeSlots.every((slot) => 
+        slot.status == 'free' || slot.status == 'time_passed' || _isTimePassed(slot.time)) 
+        && !room.isDisabled;
     final bool canEnableRoom = room.isDisabled;
 
-    // Check if image is network image or local asset
     final bool isNetworkImage = room.imageUrl.startsWith('http');
 
     return Card(
@@ -385,7 +429,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Room Image/Icon
             Container(
               width: 60,
               height: 60,
@@ -414,7 +457,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
             ),
             const SizedBox(width: 12),
             
-            // Room Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,7 +517,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                   ),
                   const SizedBox(height: 8),
                   
-                  // Availability Status
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -498,10 +539,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               ),
             ),
             
-            // Action Buttons
             Column(
               children: [
-                // Edit Button
                 SizedBox(
                   width: 80,
                   child: ElevatedButton(
@@ -528,7 +567,6 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                 ),
                 const SizedBox(height: 8),
                 
-                // Enable/Disable Button
                 if (canDisableRoom)
                   SizedBox(
                     width: 80,
@@ -576,7 +614,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                       ),
                       child: const Center(
                         child: Text(
-                          'Locked',
+                          'Cannot Disable',
                           style: TextStyle(
                             color: Colors.grey,
                             fontSize: 11,

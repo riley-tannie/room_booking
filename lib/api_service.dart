@@ -77,11 +77,11 @@ class ApiService {
     }
   }
   
-  // Get all rooms
-  static Future<List<dynamic>> getAvailableRooms() async {
+  // Get all rooms (including disabled ones)
+  static Future<List<dynamic>> getAllRooms() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/rooms'),
+        Uri.parse('$baseUrl/api/rooms/all'),
         headers: headers,
       ).timeout(const Duration(seconds: 10));
 
@@ -95,7 +95,7 @@ class ApiService {
     }
   }
 
-  // Get today's rooms for lecturer
+  // Get today's rooms for lecturer (including disabled)
   static Future<List<dynamic>> getTodayRooms() async {
     try {
       final response = await http.get(
@@ -551,8 +551,9 @@ class ApiService {
   // Disable room
   static Future<Map<String, dynamic>> disableRoom(String roomId) async {
     try {
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse('$baseUrl/api/rooms/$roomId/disable'),
+        body: jsonEncode({}), // Add empty JSON object
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
@@ -571,8 +572,9 @@ class ApiService {
   // Enable room
   static Future<Map<String, dynamic>> enableRoom(String roomId) async {
     try {
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse('$baseUrl/api/rooms/$roomId/enable'),
+        body: jsonEncode({}), // Add empty JSON object
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
@@ -594,8 +596,9 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/disable'),
+        body: jsonEncode({}), // Add empty JSON object
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
@@ -617,8 +620,9 @@ class ApiService {
     required String timeSlot,
   }) async {
     try {
-      final response = await http.put(
+      final response = await http.patch(
         Uri.parse('$baseUrl/api/rooms/$roomId/time-slots/$timeSlot/enable'),
+        body: jsonEncode({}), // Add empty JSON object
         headers: headers,
       ).timeout(const Duration(seconds: 15));
 
@@ -634,7 +638,7 @@ class ApiService {
     }
   }
 
-  // Get rooms with availability
+  // Get rooms with availability (for students - only enabled rooms)
   static Future<List<dynamic>> getRoomsWithAvailability() async {
     try {
       final response = await http.get(

@@ -36,7 +36,7 @@ class _BookingState extends State<Booking> {
       if (currentStudentId != null) {
         hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
         
-        final roomsData = await ApiService.getAvailableRooms();
+        final roomsData = await ApiService.getRoomsWithAvailability();
         
         // Clear existing rooms
         availableRooms.clear();

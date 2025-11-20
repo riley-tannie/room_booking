@@ -39,7 +39,50 @@ class _RoomEditPageState extends State<RoomEditPage> {
     _locationController.text = _room.location;
     _descriptionController.text = _room.description;
     _selectedCategory = _room.category;
-    _ensureAllTimeSlots();
+    _loadRoomTimeSlots();
+  }
+
+  Future<void> _loadRoomTimeSlots() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Fetch actual time slots for the room
+      final timeSlotsData = await ApiService.getTodayTimeSlots(_room.id);
+      
+      // Convert to TimeSlot objects with time validation
+      _room.timeSlots = timeSlotsData.map((slotData) {
+        final slot = TimeSlot.fromJson(slotData);
+        // Check if time has passed and update status accordingly
+        if (_isTimePassed(slot.time)) {
+          return TimeSlot(
+            id: slot.id,
+            time: slot.time,
+            status: 'time_passed',
+            displayStatus: 'Time Passed',
+            color: const Color(0xFF9CA3AF),
+            studentName: slot.studentName,
+            studentId: slot.studentId,
+            bookingId: slot.bookingId,
+          );
+        }
+        return slot;
+      }).toList();
+
+      // Ensure we have all 4 time slots
+      _ensureAllTimeSlots();
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      // Fallback: ensure we have all time slots
+      _ensureAllTimeSlots();
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _ensureAllTimeSlots() {
@@ -48,19 +91,37 @@ class _RoomEditPageState extends State<RoomEditPage> {
     
     for (String slotTime in _allTimeSlots) {
       if (!existingSlots.contains(slotTime)) {
-        // Add missing time slot as free
+        // Add missing time slot as free (if not passed) or time_passed
+        final isPassed = _isTimePassed(slotTime);
         _room.timeSlots.add(TimeSlot(
           id: slotTime,
           time: slotTime,
-          status: 'free',
-          displayStatus: 'Available',
-          color: const Color(0xFF26A65B),
+          status: isPassed ? 'time_passed' : 'free',
+          displayStatus: isPassed ? 'Time Passed' : 'Available',
+          color: isPassed ? const Color(0xFF9CA3AF) : const Color(0xFF26A65B),
         ));
       }
     }
 
     // Sort time slots
     _room.timeSlots.sort((a, b) => _allTimeSlots.indexOf(a.time).compareTo(_allTimeSlots.indexOf(b.time)));
+  }
+
+  bool _isTimePassed(String timeSlot) {
+    final now = DateTime.now();
+    final currentTime = now.hour * 60 + now.minute;
+    
+    // Parse the end time from time slot string (e.g., "08:00-10:00")
+    try {
+      final endTimeStr = timeSlot.split('-')[1];
+      final endHours = int.parse(endTimeStr.split(':')[0]);
+      final endMinutes = int.parse(endTimeStr.split(':')[1]);
+      final slotEndTime = endHours * 60 + endMinutes;
+      
+      return currentTime >= slotEndTime;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override
@@ -107,84 +168,53 @@ class _RoomEditPageState extends State<RoomEditPage> {
   }
 
   Future<void> _toggleTimeSlot(TimeSlot slot) async {
-  try {
-    TimeSlot newSlot;
-    
-    if (slot.status == 'disabled') {
-      await ApiService.enableTimeSlot(
-        roomId: _room.id,
-        timeSlot: slot.time,
-      );
-      // Create new slot with updated status
-      newSlot = TimeSlot(
-        id: slot.id,
-        time: slot.time,
-        status: 'free',
-        displayStatus: 'Available',
-        color: const Color(0xFF26A65B),
-      );
-    } else if (slot.status == 'free') {
-      await ApiService.disableTimeSlot(
-        roomId: _room.id,
-        timeSlot: slot.time,
-      );
-      // Create new slot with updated status
-      newSlot = TimeSlot(
-        id: slot.id,
-        time: slot.time,
-        status: 'disabled',
-        displayStatus: 'Disabled',
-        color: const Color(0xFF6B7280),
-      );
-    } else {
-      return; // Don't update if status is not free or disabled
-    }
-
-    // Update the timeSlots list with the new slot
-    setState(() {
-      final index = _room.timeSlots.indexWhere((s) => s.time == slot.time);
-      if (index != -1) {
-        _room.timeSlots[index] = newSlot;
-      }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Time slot updated successfully')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to update time slot: $e')),
-    );
-  }
-}
-
-  bool _isTimeSlotPassed(String timeSlot) {
     try {
-      final now = TimeOfDay.now();
-      final slotTime = _parseTimeSlot(timeSlot);
-      
-      if (slotTime != null) {
-        return slotTime.hour < now.hour || 
-               (slotTime.hour == now.hour && slotTime.minute <= now.minute);
+      // Don't allow toggling if time has passed
+      if (_isTimePassed(slot.time)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot modify time slots that have already passed')),
+        );
+        return;
       }
-      return false;
-    } catch (e) {
-      return false;
-    }
-  }
 
-  TimeOfDay? _parseTimeSlot(String timeSlot) {
-    try {
-      final timePart = timeSlot.split('-').first.trim();
-      final parts = timePart.split(':');
-      if (parts.length >= 2) {
-        final hour = int.parse(parts[0]);
-        final minute = int.parse(parts[1]);
-        return TimeOfDay(hour: hour, minute: minute);
+      // Don't allow toggling if slot is booked or pending
+      if (slot.status == 'pending' || slot.status == 'reserved') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot modify booked or pending time slots')),
+        );
+        return;
       }
-      return null;
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      if (slot.status == 'disabled') {
+        await ApiService.enableTimeSlot(
+          roomId: _room.id,
+          timeSlot: slot.time,
+        );
+      } else if (slot.status == 'free') {
+        await ApiService.disableTimeSlot(
+          roomId: _room.id,
+          timeSlot: slot.time,
+        );
+      }
+
+      // Reload the time slots to get updated status
+      await _loadRoomTimeSlots();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Time slot updated successfully')),
+      );
     } catch (e) {
-      return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update time slot: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -223,7 +253,7 @@ class _RoomEditPageState extends State<RoomEditPage> {
   }
 
   Widget _buildTimeSlotCard(TimeSlot slot) {
-    final isPassed = _isTimeSlotPassed(slot.time);
+    final isPassed = _isTimePassed(slot.time);
     final isInteractive = (slot.status == 'free' || slot.status == 'disabled') && !isPassed;
     final statusColor = _getStatusColor(isPassed ? 'time_passed' : slot.status);
     final statusText = _getStatusText(isPassed ? 'time_passed' : slot.status);
@@ -257,6 +287,27 @@ class _RoomEditPageState extends State<RoomEditPage> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  if (slot.studentName != null && slot.studentName!.isNotEmpty && !isPassed) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Booked by: ${slot.studentName}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                  if (isPassed) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'This time slot has ended',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -264,15 +315,24 @@ class _RoomEditPageState extends State<RoomEditPage> {
             // Action button or status badge
             if (isInteractive)
               ElevatedButton(
-                onPressed: () => _toggleTimeSlot(slot),
+                onPressed: _isLoading ? null : () => _toggleTimeSlot(slot),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: slot.status == 'free' ? Colors.red : Colors.green,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
-                child: Text(
-                  slot.status == 'free' ? 'Disable' : 'Enable',
-                  style: const TextStyle(color: Colors.white),
-                ),
+                child: _isLoading 
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        slot.status == 'free' ? 'Disable' : 'Enable',
+                        style: const TextStyle(color: Colors.white),
+                      ),
               )
             else
               Container(
@@ -526,7 +586,7 @@ class _RoomEditPageState extends State<RoomEditPage> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
-                                    onPressed: _updateRoom,
+                                    onPressed: _isLoading ? null : _updateRoom,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF2C5473),
                                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -534,10 +594,19 @@ class _RoomEditPageState extends State<RoomEditPage> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Update Room Details',
-                                      style: TextStyle(fontSize: 16, color: Colors.white),
-                                    ),
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Update Room Details',
+                                            style: TextStyle(fontSize: 16, color: Colors.white),
+                                          ),
                                   ),
                                 ),
                               ],
@@ -547,7 +616,7 @@ class _RoomEditPageState extends State<RoomEditPage> {
                         
                         const SizedBox(height: 20),
                         
-                        // Time Slots Section - SHOWS ALL 4 SLOTS
+                        // Time Slots Section
                         Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(

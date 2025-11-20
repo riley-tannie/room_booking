@@ -38,7 +38,7 @@ class _RoomListState extends State<RoomList> {
       
       if (currentStudentId != null) {
         hasBookedToday = await ApiService.hasStudentBookedToday(currentStudentId!);
-        final roomsData = await ApiService.getAvailableRooms();
+        final roomsData = await ApiService.getRoomsWithAvailability();
         
         availableRooms.clear();
         for (var roomData in roomsData) {
